@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -16,9 +16,6 @@ import { AppLogo } from "@/components/dashboard/app-logo";
 import { GlobalSearch } from "@/components/dashboard/global-search";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { api } from "@/lib/api";
-import { getCategoryMetadata } from "@/lib/constants/categories";
-import type { Category } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const navigation = [
@@ -36,19 +33,10 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { user, isLoading, logout } = useAuth();
-  const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
     if (!isLoading && !user) router.replace("/login");
   }, [isLoading, router, user]);
-
-  useEffect(() => {
-    if (!user) return;
-    api
-      .get<Category[]>("/categories")
-      .then(({ data }) => setCategories(data))
-      .catch(() => setCategories([]));
-  }, [user]);
 
   if (isLoading || !user) {
     return (
@@ -101,29 +89,6 @@ export default function DashboardLayout({
               );
             })}
           </nav>
-
-          <div className="mt-7">
-            <p className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Categories
-            </p>
-            <div className="mt-2 space-y-1">
-              {categories.map((category) => {
-                const metadata = getCategoryMetadata(category.name);
-                const Icon = metadata.icon;
-                const categoryPage = pathname === "/tasks" ? "/tasks" : "/goals";
-                return (
-                  <Link
-                    key={category.id}
-                    href={`${categoryPage}?categoryId=${category.id}`}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  >
-                    <Icon className="size-4" />
-                    <span className="truncate">{category.name}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
 
           <div className="mt-7 grid grid-cols-2 gap-2">
             <Link

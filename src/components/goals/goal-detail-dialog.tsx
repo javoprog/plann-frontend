@@ -17,7 +17,8 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { api, getApiError } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import type { Goal, Subtask } from "@/lib/types";
+import { withTaskCompletion } from "@/lib/task-completion";
+import type { Goal, Task } from "@/lib/types";
 
 interface GoalDetailDialogProps {
   goalId: string | null;
@@ -51,24 +52,36 @@ export function GoalDetailDialog({
     queueMicrotask(() => void loadGoal());
   }, [loadGoal]);
 
-  async function toggleTask(taskId: string, isCompleted: boolean) {
+  async function toggleTask(task: Task, isCompleted: boolean) {
+    updateTask(withTaskCompletion(task, isCompleted));
     try {
-      await api.patch(`/tasks/${taskId}`, { isCompleted });
-      await loadGoal();
+      const { data } = await api.patch<Task>(`/tasks/${task.id}`, {
+        isCompleted,
+      });
+      updateTask(data);
       onChanged();
     } catch (error) {
+      updateTask(task);
       toast.error(getApiError(error));
     }
   }
 
-  function updateSubtasks(taskId: string, subtasks: Subtask[]) {
+  function updateTask(updatedTask: Task) {
     setGoal((current) => {
       if (!current?.tasks) return current;
+      const tasks = current.tasks.map((task) =>
+        task.id === updatedTask.id ? updatedTask : task,
+      );
+      const completedTasks = tasks.filter((task) => task.isCompleted).length;
+      const totalTasks = tasks.length;
       return {
         ...current,
-        tasks: current.tasks.map((task) =>
-          task.id === taskId ? { ...task, subtasks } : task,
-        ),
+        tasks,
+        completedTasks,
+        totalTasks,
+        progress: totalTasks
+          ? Math.round((completedTasks / totalTasks) * 100)
+          : 0,
       };
     });
   }
@@ -122,7 +135,7 @@ export function GoalDetailDialog({
                         <Checkbox
                           checked={task.isCompleted}
                           onCheckedChange={(checked) =>
-                            void toggleTask(task.id, Boolean(checked))
+                            void toggleTask(task, Boolean(checked))
                           }
                         />
                         <span
@@ -141,11 +154,9 @@ export function GoalDetailDialog({
                         )}
                       </label>
                       <SubtaskChecklist
-                        taskId={task.id}
-                        subtasks={task.subtasks}
-                        onChange={(subtasks) =>
-                          updateSubtasks(task.id, subtasks)
-                        }
+                        task={task}
+                        onChange={updateTask}
+                        onSettled={onChanged}
                       />
                     </div>
                   ))

@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { SubtaskChecklist } from "@/components/tasks/subtask-checklist";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,6 +30,7 @@ interface TaskFormDialogProps {
   onOpenChange: (open: boolean) => void;
   goals: Goal[];
   task?: Task | null;
+  onTaskChanged: (task: Task) => void;
   onSaved: () => void;
 }
 
@@ -37,6 +39,7 @@ export function TaskFormDialog({
   onOpenChange,
   goals,
   task,
+  onTaskChanged,
   onSaved,
 }: TaskFormDialogProps) {
   const [goalId, setGoalId] = useState(task?.goalId ?? "standalone");
@@ -60,7 +63,8 @@ export function TaskFormDialog({
     setIsSubmitting(true);
     try {
       if (task) {
-        await api.patch(`/tasks/${task.id}`, payload);
+        const { data } = await api.patch<Task>(`/tasks/${task.id}`, payload);
+        onTaskChanged(data);
         toast.success("Task updated");
       } else {
         await api.post("/tasks", payload);
@@ -157,6 +161,11 @@ export function TaskFormDialog({
               defaultValue={task?.dueDate?.slice(0, 10) ?? ""}
             />
           </div>
+          {task && (
+            <div className="rounded-lg border px-3 pb-3">
+              <SubtaskChecklist task={task} onChange={onTaskChanged} />
+            </div>
+          )}
           <DialogFooter>
             <Button
               type="button"

@@ -33,7 +33,8 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, getApiError } from "@/lib/api";
 import { formatDate, isOverdue, isThisWeek, isToday } from "@/lib/format";
-import type { Goal, Subtask, Task } from "@/lib/types";
+import { withTaskCompletion } from "@/lib/task-completion";
+import type { Goal, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type TaskTab = "all" | "standalone" | "linked";
@@ -99,11 +100,14 @@ function TasksContent() {
     return filtered;
   }, [categoryId, dateFilter, tab, tasks]);
 
-  function updateSubtasks(taskId: string, subtasks: Subtask[]) {
+  function updateTask(updatedTask: Task) {
     setTasks((current) =>
       current.map((task) =>
-        task.id === taskId ? { ...task, subtasks } : task,
+        task.id === updatedTask.id ? updatedTask : task,
       ),
+    );
+    setEditingTask((current) =>
+      current?.id === updatedTask.id ? updatedTask : current,
     );
   }
 
@@ -118,21 +122,14 @@ function TasksContent() {
   }
 
   async function toggleTask(task: Task, isCompleted: boolean) {
-    setTasks((current) =>
-      current.map((item) =>
-        item.id === task.id ? { ...item, isCompleted } : item,
-      ),
-    );
+    updateTask(withTaskCompletion(task, isCompleted));
     try {
-      await api.patch(`/tasks/${task.id}`, { isCompleted });
+      const { data } = await api.patch<Task>(`/tasks/${task.id}`, {
+        isCompleted,
+      });
+      updateTask(data);
     } catch (error) {
-      setTasks((current) =>
-        current.map((item) =>
-          item.id === task.id
-            ? { ...item, isCompleted: task.isCompleted }
-            : item,
-        ),
-      );
+      updateTask(task);
       toast.error(getApiError(error));
     }
   }
@@ -235,9 +232,8 @@ function TasksContent() {
                     </span>
                   </div>
                   <SubtaskChecklist
-                    taskId={task.id}
-                    subtasks={task.subtasks}
-                    onChange={(subtasks) => updateSubtasks(task.id, subtasks)}
+                    task={task}
+                    onChange={updateTask}
                   />
                 </div>
                 <DropdownMenu>
@@ -285,6 +281,7 @@ function TasksContent() {
         onOpenChange={setFormOpen}
         goals={goals}
         task={editingTask}
+        onTaskChanged={updateTask}
         onSaved={() => void loadData()}
       />
     </div>

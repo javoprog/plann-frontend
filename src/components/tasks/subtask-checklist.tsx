@@ -1,43 +1,60 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { api, getApiError } from "@/lib/api";
-import type { Subtask } from "@/lib/types";
+import {
+  withAddedSubtask,
+  withoutSubtask,
+  withSubtaskCompletion,
+} from "@/lib/task-completion";
+import type { Subtask, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface SubtaskChecklistProps {
-  taskId: string;
-  subtasks?: Subtask[];
-  onChange: (subtasks: Subtask[]) => void;
+  task: Task;
+  onChange: (task: Task) => void;
+  onSettled?: () => void;
 }
 
 export function SubtaskChecklist({
-  taskId,
-  subtasks = [],
+  task,
   onChange,
+  onSettled,
 }: SubtaskChecklistProps) {
   const [title, setTitle] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const subtasks = task.subtasks ?? [];
   const completed = subtasks.filter((subtask) => subtask.isCompleted).length;
 
-  async function addSubtask(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function addSubtask() {
     const trimmedTitle = title.trim();
     if (!trimmedTitle || isAdding) return;
 
+    const now = new Date().toISOString();
+    const optimisticSubtask: Subtask = {
+      id: `optimistic-${Date.now()}`,
+      title: trimmedTitle,
+      isCompleted: false,
+      taskId: task.id,
+      createdAt: now,
+      updatedAt: now,
+    };
+    onChange(withAddedSubtask(task, optimisticSubtask));
     setIsAdding(true);
     try {
-      const { data } = await api.post<Subtask>(`/tasks/${taskId}/subtasks`, {
+      const { data } = await api.post<Task>(`/tasks/${task.id}/subtasks`, {
         title: trimmedTitle,
       });
-      onChange([...subtasks, data]);
+      onChange(data);
       setTitle("");
+      onSettled?.();
     } catch (error) {
+      onChange(task);
       toast.error(getApiError(error));
     } finally {
       setIsAdding(false);
@@ -45,24 +62,27 @@ export function SubtaskChecklist({
   }
 
   async function toggleSubtask(subtask: Subtask, isCompleted: boolean) {
-    const optimistic = subtasks.map((item) =>
-      item.id === subtask.id ? { ...item, isCompleted } : item,
-    );
-    onChange(optimistic);
+    onChange(withSubtaskCompletion(task, subtask.id, isCompleted));
     try {
-      await api.patch(`/subtasks/${subtask.id}`, { isCompleted });
+      const { data } = await api.patch<Task>(`/subtasks/${subtask.id}`, {
+        isCompleted,
+      });
+      onChange(data);
+      onSettled?.();
     } catch (error) {
-      onChange(subtasks);
+      onChange(task);
       toast.error(getApiError(error));
     }
   }
 
   async function deleteSubtask(subtask: Subtask) {
-    onChange(subtasks.filter((item) => item.id !== subtask.id));
+    onChange(withoutSubtask(task, subtask.id));
     try {
-      await api.delete(`/subtasks/${subtask.id}`);
+      const { data } = await api.delete<Task>(`/subtasks/${subtask.id}`);
+      onChange(data);
+      onSettled?.();
     } catch (error) {
-      onChange(subtasks);
+      onChange(task);
       toast.error(getApiError(error));
     }
   }
@@ -105,7 +125,7 @@ export function SubtaskChecklist({
           ))}
         </div>
       )}
-      <form className="flex gap-2" onSubmit={addSubtask}>
+      <div className="flex gap-2">
         <Input
           className="h-8 text-xs"
           value={title}
@@ -113,17 +133,24 @@ export function SubtaskChecklist({
           placeholder="Add a subtask"
           maxLength={200}
           aria-label="New subtask title"
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void addSubtask();
+            }
+          }}
         />
         <Button
-          type="submit"
+          type="button"
           size="icon-sm"
           variant="outline"
           disabled={!title.trim() || isAdding}
           aria-label="Add subtask"
+          onClick={() => void addSubtask()}
         >
           <Plus className="size-3.5" />
         </Button>
-      </form>
+      </div>
     </div>
   );
 }
