@@ -10,6 +10,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarDays, MoreHorizontal, Pencil, Plus, Target, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { GoalDetailDialog } from "@/components/goals/goal-detail-dialog";
@@ -36,6 +37,7 @@ import type { Category, Goal, GoalStatus } from "@/lib/types";
 type StatusFilter = GoalStatus | "all";
 
 function GoalsContent() {
+  const { refreshUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const categoryId = searchParams.get("categoryId") ?? "all";
@@ -102,6 +104,9 @@ function GoalsContent() {
     if (!window.confirm(`Delete “${goal.title}” and its linked tasks?`)) return;
     try {
       await api.delete(`/goals/${goal.id}`);
+      void refreshUser().catch((error: unknown) =>
+        toast.error(getApiError(error)),
+      );
       toast.success("Goal deleted");
       void loadGoals();
     } catch (error) {

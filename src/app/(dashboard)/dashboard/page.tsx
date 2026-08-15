@@ -13,17 +13,24 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
+import { MonthlyDots } from "@/components/habits/monthly-dots";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { api, getApiError } from "@/lib/api";
+import {
+  celebrateHabitCompletion,
+  celebrateNewlyCompletedGoals,
+} from "@/lib/confetti";
 import { formatDate, getLocalDateKey, isToday } from "@/lib/format";
 import type { Goal, Habit, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
+  const { user, refreshUser } = useAuth();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -87,9 +94,19 @@ export default function DashboardPage() {
       ),
     );
     try {
-      await api.patch(`/tasks/${task.id}`, { isCompleted });
+      const previousGoals = goals;
+      const { data: updatedTask } = await api.patch<Task>(`/tasks/${task.id}`, {
+        isCompleted,
+      });
+      setTasks((current) =>
+        current.map((item) => (item.id === task.id ? updatedTask : item)),
+      );
       const { data } = await api.get<Goal[]>("/goals");
+      celebrateNewlyCompletedGoals(previousGoals, data);
       setGoals(data);
+      void refreshUser().catch((error: unknown) =>
+        toast.error(getApiError(error)),
+      );
     } catch (error) {
       setTasks((current) =>
         current.map((item) =>
@@ -125,6 +142,10 @@ export default function DashboardPage() {
       await api.post(`/habits/${habit.id}/toggle`, { date: todayKey });
       const { data } = await api.get<Habit[]>("/habits");
       setHabits(data);
+      if (!wasCompleted) celebrateHabitCompletion();
+      void refreshUser().catch((error: unknown) =>
+        toast.error(getApiError(error)),
+      );
     } catch (error) {
       setHabits((current) =>
         current.map((item) => (item.id === habit.id ? habit : item)),
@@ -170,7 +191,17 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent>
+          <p className="text-base font-medium">
+            Good day, {user?.name ?? "Planner"}! Tasks pending today:{" "}
+            {pendingToday.length}. Global Activity Streak: &#128293;{" "}
+            {user?.globalStreak ?? 0} days!
+          </p>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((item) => (
           <Card key={item.label}>
             <CardContent className="flex items-center justify-between">
@@ -187,6 +218,28 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         ))}
+        <Card>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm text-muted-foreground">Current level</p>
+                <p className="mt-2 text-3xl font-bold tracking-tight">
+                  {isLoading ? "..." : user?.level ?? 1}
+                </p>
+              </div>
+              <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Flame className="size-5" />
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{user?.xp ?? 0} XP total</span>
+                <span>{user?.xpToNextLevel ?? 100} to next</span>
+              </div>
+              <Progress value={(user?.xp ?? 0) % 100} />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">
@@ -332,25 +385,30 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={habit.id}
-                    className="flex items-center gap-3 rounded-lg border p-3"
+                    className="space-y-3 rounded-lg border p-3"
                   >
-                    <span className="flex size-9 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
-                      <Flame className="size-4" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{habit.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {habit.currentStreak} day streak
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <span className="flex size-9 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
+                        <Flame className="size-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {habit.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {habit.currentStreak} day streak
+                        </p>
+                      </div>
+                      <Button
+                        size="icon-sm"
+                        variant={completedToday ? "default" : "outline"}
+                        onClick={() => void toggleHabit(habit)}
+                        aria-label={`${completedToday ? "Undo" : "Complete"} ${habit.title}`}
+                      >
+                        <Check className="size-4" />
+                      </Button>
                     </div>
-                    <Button
-                      size="icon-sm"
-                      variant={completedToday ? "default" : "outline"}
-                      onClick={() => void toggleHabit(habit)}
-                      aria-label={`${completedToday ? "Undo" : "Complete"} ${habit.title}`}
-                    >
-                      <Check className="size-4" />
-                    </Button>
+                    <MonthlyDots habit={habit} />
                   </div>
                 );
               })}

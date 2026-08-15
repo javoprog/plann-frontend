@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { DatePicker } from "@/components/shared/date-picker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api, getApiError } from "@/lib/api";
-import { formatGoalStatus } from "@/lib/format";
+import { formatGoalStatus, getLocalDateKey } from "@/lib/format";
 import type { Category, Goal, GoalStatus } from "@/lib/types";
 
 interface GoalFormDialogProps {
@@ -44,16 +45,22 @@ export function GoalFormDialog({
   const [status, setStatus] = useState<GoalStatus>(
     goal?.status ?? "IN_PROGRESS",
   );
+  const [deadline, setDeadline] = useState<Date | undefined>(
+    goal?.deadline
+      ? new Date(`${goal.deadline.slice(0, 10)}T00:00:00`)
+      : undefined,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const deadline = String(formData.get("deadline") ?? "");
     const payload = {
       title: String(formData.get("title")),
       description: String(formData.get("description") ?? ""),
-      deadline: deadline ? `${deadline}T00:00:00.000Z` : null,
+      deadline: deadline
+        ? `${getLocalDateKey(deadline)}T00:00:00.000Z`
+        : null,
       categoryId: categoryId === "none" ? null : categoryId,
       status,
     };
@@ -153,11 +160,11 @@ export function GoalFormDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="goal-deadline">Deadline</Label>
-            <Input
+            <DatePicker
               id="goal-deadline"
-              name="deadline"
-              type="date"
-              defaultValue={goal?.deadline?.slice(0, 10) ?? ""}
+              value={deadline}
+              onChange={setDeadline}
+              placeholder="Choose a deadline"
             />
           </div>
           <DialogFooter>

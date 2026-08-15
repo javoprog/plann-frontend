@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CalendarDays, CheckCircle2, Circle } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { SubtaskChecklist } from "@/components/tasks/subtask-checklist";
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { api, getApiError } from "@/lib/api";
+import { celebrateGoalCompletion } from "@/lib/confetti";
 import { formatDate } from "@/lib/format";
 import { withTaskCompletion } from "@/lib/task-completion";
 import type { Goal, Task } from "@/lib/types";
@@ -31,6 +33,7 @@ export function GoalDetailDialog({
   onOpenChange,
   onChanged,
 }: GoalDetailDialogProps) {
+  const { refreshUser } = useAuth();
   const [goal, setGoal] = useState<Goal | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -58,8 +61,7 @@ export function GoalDetailDialog({
       const { data } = await api.patch<Task>(`/tasks/${task.id}`, {
         isCompleted,
       });
-      updateTask(data);
-      onChanged();
+      handleTaskSettled(data, task);
     } catch (error) {
       updateTask(task);
       toast.error(getApiError(error));
@@ -84,6 +86,31 @@ export function GoalDetailDialog({
           : 0,
       };
     });
+  }
+
+  function getProgress(tasks: Task[]) {
+    if (!tasks.length) return 0;
+    return Math.round(
+      (tasks.filter((task) => task.isCompleted).length / tasks.length) * 100,
+    );
+  }
+
+  function handleTaskSettled(updatedTask: Task, previousTask: Task) {
+    const currentTasks = goal?.tasks ?? [];
+    const beforeTasks = currentTasks.map((task) =>
+      task.id === previousTask.id ? previousTask : task,
+    );
+    const afterTasks = currentTasks.map((task) =>
+      task.id === updatedTask.id ? updatedTask : task,
+    );
+    if (getProgress(beforeTasks) < 100 && getProgress(afterTasks) === 100) {
+      celebrateGoalCompletion();
+    }
+    updateTask(updatedTask);
+    void refreshUser().catch((error: unknown) =>
+      toast.error(getApiError(error)),
+    );
+    onChanged();
   }
 
   return (
@@ -156,7 +183,7 @@ export function GoalDetailDialog({
                       <SubtaskChecklist
                         task={task}
                         onChange={updateTask}
-                        onSettled={onChanged}
+                        onSettled={handleTaskSettled}
                       />
                     </div>
                   ))

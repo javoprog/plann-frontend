@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 interface SubtaskChecklistProps {
   task: Task;
   onChange: (task: Task) => void;
-  onSettled?: () => void;
+  onSettled?: (updatedTask: Task, previousTask: Task) => void;
 }
 
 export function SubtaskChecklist({
@@ -52,7 +52,7 @@ export function SubtaskChecklist({
       });
       onChange(data);
       setTitle("");
-      onSettled?.();
+      onSettled?.(data, task);
     } catch (error) {
       onChange(task);
       toast.error(getApiError(error));
@@ -68,7 +68,7 @@ export function SubtaskChecklist({
         isCompleted,
       });
       onChange(data);
-      onSettled?.();
+      onSettled?.(data, task);
     } catch (error) {
       onChange(task);
       toast.error(getApiError(error));
@@ -80,7 +80,7 @@ export function SubtaskChecklist({
     try {
       const { data } = await api.delete<Task>(`/subtasks/${subtask.id}`);
       onChange(data);
-      onSettled?.();
+      onSettled?.(data, task);
     } catch (error) {
       onChange(task);
       toast.error(getApiError(error));

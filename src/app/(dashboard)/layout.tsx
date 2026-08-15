@@ -8,15 +8,15 @@ import {
   CircleGauge,
   Flame,
   LogOut,
-  Plus,
   Settings,
   Target,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { AppLogo } from "@/components/dashboard/app-logo";
 import { GlobalSearch } from "@/components/dashboard/global-search";
-import { ThemeToggle } from "@/components/dashboard/theme-toggle";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 const navigation = [
@@ -92,43 +92,41 @@ export default function DashboardLayout({
             })}
           </nav>
 
-          <div className="mt-7 grid grid-cols-2 gap-2">
-            <Link
-              href="/goals?create=true"
-              className={buttonVariants({ size: "sm", className: "gap-1" })}
-            >
-              <Plus className="size-3.5" /> Goal
-            </Link>
-            <Link
-              href="/tasks?create=true"
-              className={buttonVariants({
-                size: "sm",
-                variant: "outline",
-                className: "gap-1",
-              })}
-            >
-              <Plus className="size-3.5" /> Task
-            </Link>
-          </div>
         </div>
 
         <div className="border-t p-3">
-          <div className="flex items-center gap-3 rounded-xl bg-muted/60 p-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-              {initials}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{user.name}</p>
-              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+          <div className="rounded-xl bg-muted/60 p-3">
+            <div className="flex items-center gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                {initials}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{user.name}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {user.email}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={handleLogout}
+                aria-label="Log out"
+              >
+                <LogOut className="size-4" />
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={handleLogout}
-              aria-label="Log out"
-            >
-              <LogOut className="size-4" />
-            </Button>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Badge variant="secondary">Level {user.level}</Badge>
+                <span className="text-[11px] text-muted-foreground">
+                  {user.xp} XP total
+                </span>
+              </div>
+              <Progress value={user.xp % 100} />
+              <p className="text-[11px] text-muted-foreground">
+                {user.xpToNextLevel} XP to next level
+              </p>
+            </div>
           </div>
         </div>
       </aside>
@@ -156,7 +154,6 @@ export default function DashboardLayout({
                   </Link>
                 ))}
               </nav>
-              <ThemeToggle />
               <Button
                 className="md:hidden"
                 variant="outline"

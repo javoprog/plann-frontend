@@ -10,8 +10,10 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { HabitFormDialog } from "@/components/habits/habit-form-dialog";
+import { MonthlyDots } from "@/components/habits/monthly-dots";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,9 +24,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { api, getApiError } from "@/lib/api";
+import { celebrateHabitCompletion } from "@/lib/confetti";
 import { getLocalDateKey } from "@/lib/format";
 import type { Category, Goal, Habit } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 const frequencyLabels = {
   DAILY: "Daily",
@@ -32,42 +34,8 @@ const frequencyLabels = {
   WEEKENDS: "Weekends",
 } as const;
 
-function MonthlyDots({ habit }: { habit: Habit }) {
-  const now = new Date();
-  const daysInMonth = new Date(
-    now.getFullYear(),
-    now.getMonth() + 1,
-    0,
-  ).getDate();
-  const completed = new Set(
-    habit.logs.filter((log) => log.completed).map((log) => log.date),
-  );
-  const today = getLocalDateKey(now);
-
-  return (
-    <div className="flex flex-wrap gap-1.5" aria-label="Monthly completion history">
-      {Array.from({ length: daysInMonth }, (_, index) => {
-        const day = index + 1;
-        const date = new Date(now.getFullYear(), now.getMonth(), day);
-        const dateKey = getLocalDateKey(date);
-        return (
-          <span
-            key={dateKey}
-            title={`${dateKey}: ${completed.has(dateKey) ? "completed" : "not completed"}`}
-            className={cn(
-              "size-2.5 rounded-full bg-muted",
-              completed.has(dateKey) && "bg-emerald-500",
-              dateKey === today && !completed.has(dateKey) &&
-                "ring-1 ring-primary ring-offset-1 ring-offset-background",
-            )}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
 export default function HabitsPage() {
+  const { refreshUser } = useAuth();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -136,6 +104,10 @@ export default function HabitsPage() {
       await api.post(`/habits/${habit.id}/toggle`, { date: today });
       const { data } = await api.get<Habit[]>("/habits");
       setHabits(data);
+      if (!wasCompleted) celebrateHabitCompletion();
+      void refreshUser().catch((error: unknown) =>
+        toast.error(getApiError(error)),
+      );
     } catch (error) {
       setHabits((current) =>
         current.map((item) => (item.id === habit.id ? habit : item)),
@@ -149,6 +121,9 @@ export default function HabitsPage() {
     try {
       await api.delete(`/habits/${habit.id}`);
       setHabits((current) => current.filter((item) => item.id !== habit.id));
+      void refreshUser().catch((error: unknown) =>
+        toast.error(getApiError(error)),
+      );
       toast.success("Habit deleted");
     } catch (error) {
       toast.error(getApiError(error));

@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { DatePicker } from "@/components/shared/date-picker";
 import { SubtaskChecklist } from "@/components/tasks/subtask-checklist";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api, getApiError } from "@/lib/api";
+import { getLocalDateKey } from "@/lib/format";
 import type { Goal, Priority, Task } from "@/lib/types";
 
 interface TaskFormDialogProps {
@@ -46,17 +48,23 @@ export function TaskFormDialog({
   const [priority, setPriority] = useState<Priority>(
     task?.priority ?? "MEDIUM",
   );
+  const [dueDate, setDueDate] = useState<Date | undefined>(
+    task?.dueDate
+      ? new Date(`${task.dueDate.slice(0, 10)}T00:00:00`)
+      : undefined,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const dueDate = String(formData.get("dueDate") ?? "");
     const payload = {
       title: String(formData.get("title")),
       description: String(formData.get("description") ?? ""),
       priority,
-      dueDate: dueDate ? `${dueDate}T00:00:00.000Z` : null,
+      dueDate: dueDate
+        ? `${getLocalDateKey(dueDate)}T00:00:00.000Z`
+        : null,
       goalId: goalId === "standalone" ? null : goalId,
     };
 
@@ -154,16 +162,20 @@ export function TaskFormDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="task-due-date">Due date</Label>
-            <Input
+            <DatePicker
               id="task-due-date"
-              name="dueDate"
-              type="date"
-              defaultValue={task?.dueDate?.slice(0, 10) ?? ""}
+              value={dueDate}
+              onChange={setDueDate}
+              placeholder="Choose a due date"
             />
           </div>
           {task && (
             <div className="rounded-lg border px-3 pb-3">
-              <SubtaskChecklist task={task} onChange={onTaskChanged} />
+              <SubtaskChecklist
+                task={task}
+                onChange={onTaskChanged}
+                onSettled={onSaved}
+              />
             </div>
           )}
           <DialogFooter>

@@ -18,6 +18,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { PriorityBadge } from "@/components/tasks/priority-badge";
 import { SubtaskChecklist } from "@/components/tasks/subtask-checklist";
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, getApiError } from "@/lib/api";
+import { celebrateNewlyCompletedGoals } from "@/lib/confetti";
 import { formatDate, isOverdue, isThisWeek, isToday } from "@/lib/format";
 import { withTaskCompletion } from "@/lib/task-completion";
 import type { Goal, Task } from "@/lib/types";
@@ -41,6 +43,7 @@ type TaskTab = "all" | "standalone" | "linked";
 type TaskDateFilter = "all" | "today" | "week" | "overdue";
 
 function TasksContent() {
+  const { refreshUser } = useAuth();
   const searchParams = useSearchParams();
   const categoryId = searchParams.get("categoryId");
   const handledCreate = useRef(false);
@@ -121,13 +124,32 @@ function TasksContent() {
     setFormOpen(true);
   }
 
+  async function syncAfterMutation(previousGoals: Goal[]) {
+    try {
+      const [tasksResponse, goalsResponse] = await Promise.all([
+        api.get<Task[]>("/tasks"),
+        api.get<Goal[]>("/goals"),
+      ]);
+      setTasks(tasksResponse.data);
+      setGoals(goalsResponse.data);
+      celebrateNewlyCompletedGoals(previousGoals, goalsResponse.data);
+      void refreshUser().catch((error: unknown) =>
+        toast.error(getApiError(error)),
+      );
+    } catch (error) {
+      toast.error(getApiError(error));
+    }
+  }
+
   async function toggleTask(task: Task, isCompleted: boolean) {
+    const previousGoals = goals;
     updateTask(withTaskCompletion(task, isCompleted));
     try {
       const { data } = await api.patch<Task>(`/tasks/${task.id}`, {
         isCompleted,
       });
       updateTask(data);
+      await syncAfterMutation(previousGoals);
     } catch (error) {
       updateTask(task);
       toast.error(getApiError(error));
@@ -137,8 +159,10 @@ function TasksContent() {
   async function deleteTask(task: Task) {
     if (!window.confirm(`Delete “${task.title}”?`)) return;
     try {
+      const previousGoals = goals;
       await api.delete(`/tasks/${task.id}`);
       setTasks((current) => current.filter((item) => item.id !== task.id));
+      await syncAfterMutation(previousGoals);
       toast.success("Task deleted");
     } catch (error) {
       toast.error(getApiError(error));
@@ -234,6 +258,7 @@ function TasksContent() {
                   <SubtaskChecklist
                     task={task}
                     onChange={updateTask}
+                    onSettled={() => void syncAfterMutation(goals)}
                   />
                 </div>
                 <DropdownMenu>
@@ -282,7 +307,7 @@ function TasksContent() {
         goals={goals}
         task={editingTask}
         onTaskChanged={updateTask}
-        onSaved={() => void loadData()}
+        onSaved={() => void syncAfterMutation(goals)}
       />
     </div>
   );

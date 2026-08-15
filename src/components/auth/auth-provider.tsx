@@ -26,6 +26,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
   updateUser: (user: User) => void;
+  refreshUser: () => Promise<void>;
   changeTheme: (theme: ThemePreference) => Promise<void>;
   logout: () => void;
 }
@@ -101,6 +102,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(nextUser);
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const { data } = await api.get<User>("/users/me");
+    setUser(data);
+  }, []);
+
   const changeTheme = useCallback(
     async (theme: ThemePreference) => {
       const previousTheme = user?.theme ?? "system";
@@ -129,6 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login,
       register,
       updateUser,
+      refreshUser,
       changeTheme,
       logout: clearSession,
     }),
@@ -139,6 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login,
       register,
       updateUser,
+      refreshUser,
       changeTheme,
       clearSession,
     ],

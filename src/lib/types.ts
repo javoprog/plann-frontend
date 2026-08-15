@@ -13,6 +13,10 @@ export interface User {
   name: string;
   email: string;
   theme: ThemePreference;
+  xp: number;
+  level: number;
+  globalStreak: number;
+  xpToNextLevel: number;
 }
 
 export interface Category {
