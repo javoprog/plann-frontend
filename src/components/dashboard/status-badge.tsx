@@ -1,5 +1,7 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
-import { formatGoalStatus } from "@/lib/format";
+import { useLanguage } from "@/components/providers/language-provider";
 import type { GoalStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -20,12 +22,19 @@ export function StatusBadge({
   status: GoalStatus;
   className?: string;
 }) {
+  const { t } = useLanguage();
+  const labels = {
+    PLANNED: t("status.planned"),
+    IN_PROGRESS: t("status.inProgress"),
+    COMPLETED: t("status.completed"),
+    CANCELLED: t("status.cancelled"),
+  };
   return (
     <Badge
       variant="outline"
       className={cn(statusClasses[status], className)}
     >
-      {formatGoalStatus(status)}
+      {labels[status]}
     </Badge>
   );
 }

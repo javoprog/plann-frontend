@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useLanguage } from "@/components/providers/language-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { HabitFormDialog } from "@/components/habits/habit-form-dialog";
 import { MonthlyDots } from "@/components/habits/monthly-dots";
@@ -28,14 +29,9 @@ import { celebrateHabitCompletion } from "@/lib/confetti";
 import { getLocalDateKey } from "@/lib/format";
 import type { Category, Goal, Habit } from "@/lib/types";
 
-const frequencyLabels = {
-  DAILY: "Daily",
-  WEEKDAYS: "Weekdays",
-  WEEKENDS: "Weekends",
-} as const;
-
 export default function HabitsPage() {
   const { refreshUser } = useAuth();
+  const { t } = useLanguage();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -134,14 +130,16 @@ export default function HabitsPage() {
     <div className="flex flex-col space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Habits</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {t("habits.title")}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Build consistency with daily rituals
+            {t("habits.description")}
           </p>
         </div>
         <div>
           <Button onClick={createHabit}>
-            <Plus className="size-4" /> New Habit
+            <Plus className="size-4" /> {t("actions.newHabit")}
           </Button>
         </div>
       </div>
@@ -167,7 +165,9 @@ export default function HabitsPage() {
                         <CategoryBadge category={habit.category} />
                         <Badge variant="secondary" className="gap-1">
                           <Flame className="size-3 text-orange-500" />
-                          {habit.currentStreak} day streak
+                          {t("common.dayStreak", {
+                            count: habit.currentStreak,
+                          })}
                         </Badge>
                       </div>
                       <CardTitle className="text-lg">{habit.title}</CardTitle>
@@ -186,13 +186,13 @@ export default function HabitsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => editHabit(habit)}>
-                          <Pencil className="size-4" /> Edit
+                          <Pencil className="size-4" /> {t("actions.edit")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           variant="destructive"
                           onClick={() => void deleteHabit(habit)}
                         >
-                          <Trash2 className="size-4" /> Delete
+                          <Trash2 className="size-4" /> {t("actions.delete")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -202,10 +202,16 @@ export default function HabitsPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium">
-                        {frequencyLabels[habit.frequency]}
+                        {t(
+                          habit.frequency === "DAILY"
+                            ? "frequency.daily"
+                            : habit.frequency === "WEEKDAYS"
+                              ? "frequency.weekdays"
+                              : "frequency.weekends",
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {habit.goal?.title ?? "Independent ritual"}
+                        {habit.goal?.title ?? t("habits.independent")}
                       </p>
                     </div>
                     <Button
@@ -214,7 +220,9 @@ export default function HabitsPage() {
                       onClick={() => void toggleToday(habit)}
                     >
                       <Check className="size-4" />
-                      {completedToday ? "Done today" : "Mark done"}
+                      {completedToday
+                        ? t("actions.doneToday")
+                        : t("actions.markDone")}
                     </Button>
                   </div>
                   <MonthlyDots habit={habit} />
@@ -226,12 +234,12 @@ export default function HabitsPage() {
       ) : (
         <div className="flex min-h-72 flex-col items-center justify-center rounded-xl border border-dashed bg-background text-center">
           <Flame className="size-8 text-muted-foreground" />
-          <h2 className="mt-3 font-semibold">No habits yet</h2>
+          <h2 className="mt-3 font-semibold">{t("habits.noHabits")}</h2>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
             Start with one small ritual you can repeat today.
           </p>
           <Button className="mt-4" variant="outline" onClick={createHabit}>
-            <Plus className="size-4" /> Create your first habit
+            <Plus className="size-4" /> {t("actions.createHabit")}
           </Button>
         </div>
       )}

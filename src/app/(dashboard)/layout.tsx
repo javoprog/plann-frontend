@@ -17,14 +17,20 @@ import { GlobalSearch } from "@/components/dashboard/global-search";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { useLanguage } from "@/components/providers/language-provider";
+import type { TranslationKey } from "@/lib/i18n/translations";
 import { cn } from "@/lib/utils";
 
-const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: CircleGauge },
-  { name: "Goals", href: "/goals", icon: Target },
-  { name: "Tasks", href: "/tasks", icon: CheckSquare2 },
-  { name: "Habits", href: "/habits", icon: Flame },
-  { name: "Settings", href: "/settings", icon: Settings },
+const navigation: Array<{
+  label: TranslationKey;
+  href: string;
+  icon: typeof CircleGauge;
+}> = [
+  { label: "nav.dashboard", href: "/dashboard", icon: CircleGauge },
+  { label: "nav.goals", href: "/goals", icon: Target },
+  { label: "nav.tasks", href: "/tasks", icon: CheckSquare2 },
+  { label: "nav.habits", href: "/habits", icon: Flame },
+  { label: "nav.settings", href: "/settings", icon: Settings },
 ];
 
 export default function DashboardLayout({
@@ -33,6 +39,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { t } = useLanguage();
   const router = useRouter();
   const { user, isLoading, logout } = useAuth();
 
@@ -86,7 +93,7 @@ export default function DashboardLayout({
                   )}
                 >
                   <item.icon className="size-4" />
-                  {item.name}
+                  {t(item.label)}
                 </Link>
               );
             })}
@@ -110,21 +117,23 @@ export default function DashboardLayout({
                 variant="ghost"
                 size="icon-sm"
                 onClick={handleLogout}
-                aria-label="Log out"
+                aria-label={t("actions.logOut")}
               >
                 <LogOut className="size-4" />
               </Button>
             </div>
             <div className="mt-3 space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <Badge variant="secondary">Level {user.level}</Badge>
+                <Badge variant="secondary">
+                  {t("dashboard.currentLevel")} {user.level}
+                </Badge>
                 <span className="text-[11px] text-muted-foreground">
-                  {user.xp} XP total
+                  {t("dashboard.xpTotal", { xp: user.xp })}
                 </span>
               </div>
               <Progress value={user.xp % 100} />
               <p className="text-[11px] text-muted-foreground">
-                {user.xpToNextLevel} XP to next level
+                {t("dashboard.toNext", { xp: user.xpToNextLevel })}
               </p>
             </div>
           </div>
@@ -144,7 +153,7 @@ export default function DashboardLayout({
                   <Link
                     key={item.href}
                     href={item.href}
-                    aria-label={item.name}
+                    aria-label={t(item.label)}
                     className={cn(
                       "rounded-lg p-2 text-muted-foreground",
                       pathname === item.href && "bg-muted text-foreground",
@@ -159,7 +168,7 @@ export default function DashboardLayout({
                 variant="outline"
                 size="icon"
                 onClick={handleLogout}
-                aria-label="Log out"
+                aria-label={t("actions.logOut")}
               >
                 <LogOut className="size-4" />
               </Button>

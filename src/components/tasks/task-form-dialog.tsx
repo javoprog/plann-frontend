@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { DatePicker } from "@/components/shared/date-picker";
+import { useLanguage } from "@/components/providers/language-provider";
 import { SubtaskChecklist } from "@/components/tasks/subtask-checklist";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +33,7 @@ interface TaskFormDialogProps {
   onOpenChange: (open: boolean) => void;
   goals: Goal[];
   task?: Task | null;
+  defaultGoalId?: string;
   onTaskChanged: (task: Task) => void;
   onSaved: () => void;
 }
@@ -41,10 +43,14 @@ export function TaskFormDialog({
   onOpenChange,
   goals,
   task,
+  defaultGoalId,
   onTaskChanged,
   onSaved,
 }: TaskFormDialogProps) {
-  const [goalId, setGoalId] = useState(task?.goalId ?? "standalone");
+  const { t } = useLanguage();
+  const [goalId, setGoalId] = useState(
+    task?.goalId ?? defaultGoalId ?? "standalone",
+  );
   const [priority, setPriority] = useState<Priority>(
     task?.priority ?? "MEDIUM",
   );
@@ -89,16 +95,18 @@ export function TaskFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{task ? "Edit task" : "Create a new task"}</DialogTitle>
+          <DialogTitle>
+            {task ? t("form.editTaskTitle") : t("form.createTaskTitle")}
+          </DialogTitle>
           <DialogDescription>
             Keep it standalone or connect it to a goal for automatic progress.
           </DialogDescription>
         </DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="task-title">Title</Label>
+            <Label htmlFor="task-title">{t("form.title")}</Label>
             <Input
               id="task-title"
               name="title"
@@ -110,7 +118,7 @@ export function TaskFormDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="task-description">Description</Label>
+            <Label htmlFor="task-description">{t("form.description")}</Label>
             <Textarea
               id="task-description"
               name="description"
@@ -121,18 +129,18 @@ export function TaskFormDialog({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Related goal</Label>
+              <Label>{t("form.relatedGoal")}</Label>
               <Select value={goalId} onValueChange={(value) => setGoalId(String(value))}>
                 <SelectTrigger className="w-full">
                   <span className="truncate">
                     {goalId === "standalone"
-                      ? "Standalone task"
+                      ? t("common.standalone")
                       : goals.find((goal) => goal.id === goalId)?.title ??
-                        "Choose a goal"}
+                        t("form.chooseGoal")}
                   </span>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="standalone">Standalone task</SelectItem>
+                  <SelectItem value="standalone">{t("common.standalone")}</SelectItem>
                   {goals.map((goal) => (
                     <SelectItem key={goal.id} value={goal.id}>
                       {goal.title}
@@ -142,31 +150,37 @@ export function TaskFormDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Priority</Label>
+              <Label>{t("form.priority")}</Label>
               <Select
                 value={priority}
                 onValueChange={(value) => setPriority(value as Priority)}
               >
                 <SelectTrigger className="w-full">
                   <span className="truncate">
-                    {priority.charAt(0) + priority.slice(1).toLowerCase()}
+                    {t(
+                      priority === "LOW"
+                        ? "priority.low"
+                        : priority === "MEDIUM"
+                          ? "priority.medium"
+                          : "priority.high",
+                    )}
                   </span>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="LOW">Low</SelectItem>
-                  <SelectItem value="MEDIUM">Medium</SelectItem>
-                  <SelectItem value="HIGH">High</SelectItem>
+                  <SelectItem value="LOW">{t("priority.low")}</SelectItem>
+                  <SelectItem value="MEDIUM">{t("priority.medium")}</SelectItem>
+                  <SelectItem value="HIGH">{t("priority.high")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="task-due-date">Due date</Label>
+            <Label htmlFor="task-due-date">{t("form.dueDate")}</Label>
             <DatePicker
               id="task-due-date"
               value={dueDate}
               onChange={setDueDate}
-              placeholder="Choose a due date"
+              placeholder={t("form.chooseDate")}
             />
           </div>
           {task && (
@@ -184,11 +198,11 @@ export function TaskFormDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {t("actions.cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-              {task ? "Save changes" : "Create task"}
+              {task ? t("actions.saveChanges") : t("actions.createTask")}
             </Button>
           </DialogFooter>
         </form>

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useLanguage } from "@/components/providers/language-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { PriorityBadge } from "@/components/tasks/priority-badge";
 import { SubtaskChecklist } from "@/components/tasks/subtask-checklist";
@@ -44,6 +45,7 @@ type TaskDateFilter = "all" | "today" | "week" | "overdue";
 
 function TasksContent() {
   const { refreshUser } = useAuth();
+  const { language, t } = useLanguage();
   const searchParams = useSearchParams();
   const categoryId = searchParams.get("categoryId");
   const handledCreate = useRef(false);
@@ -173,32 +175,34 @@ function TasksContent() {
     <div className="flex flex-col space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Tasks</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {t("tasks.title")}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Keep every next step in one place, whether standalone or goal-linked.
+            {t("tasks.description")}
           </p>
         </div>
         <div>
           <Button onClick={createTask}>
-            <Plus className="size-4" /> Create Task
+            <Plus className="size-4" /> {t("actions.createTask")}
           </Button>
         </div>
       </div>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as TaskTab)}>
         <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="standalone">Standalone</TabsTrigger>
-          <TabsTrigger value="linked">Linked to Goals</TabsTrigger>
+          <TabsTrigger value="all">{t("tasks.all")}</TabsTrigger>
+          <TabsTrigger value="standalone">{t("tasks.standalone")}</TabsTrigger>
+          <TabsTrigger value="linked">{t("tasks.linked")}</TabsTrigger>
         </TabsList>
       </Tabs>
 
       <div className="flex flex-wrap gap-2">
         {([
-          ["all", "All"],
-          ["today", "Today"],
-          ["week", "This Week"],
-          ["overdue", "Overdue"],
+          ["all", t("tasks.all")],
+          ["today", t("tasks.today")],
+          ["week", t("tasks.thisWeek")],
+          ["overdue", t("tasks.overdue")],
         ] as const).map(([value, label]) => (
           <Button
             key={value}
@@ -250,9 +254,14 @@ function TasksContent() {
                     )}
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    <span>{task.goal?.title ?? "Standalone"}</span>
+                    <span>{task.goal?.title ?? t("common.standalone")}</span>
                     <span className="flex items-center gap-1">
-                      <CalendarDays className="size-3" /> {formatDate(task.dueDate)}
+                      <CalendarDays className="size-3" />{" "}
+                      {formatDate(
+                        task.dueDate,
+                        language,
+                        t("common.noDueDate"),
+                      )}
                     </span>
                   </div>
                   <SubtaskChecklist
@@ -271,13 +280,13 @@ function TasksContent() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => editTask(task)}>
-                      <Pencil className="size-4" /> Edit
+                      <Pencil className="size-4" /> {t("actions.edit")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       variant="destructive"
                       onClick={() => void deleteTask(task)}
                     >
-                      <Trash2 className="size-4" /> Delete
+                      <Trash2 className="size-4" /> {t("actions.delete")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -289,12 +298,12 @@ function TasksContent() {
             <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
               <CheckSquare2 className="size-6 text-muted-foreground" />
             </span>
-            <h2 className="font-semibold">No tasks here</h2>
+            <h2 className="font-semibold">{t("tasks.noTasks")}</h2>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
               Add a task or switch tabs to see another part of your list.
             </p>
             <Button className="mt-4" variant="outline" onClick={createTask}>
-              <Plus className="size-4" /> Create your first task
+              <Plus className="size-4" /> {t("actions.createTask")}
             </Button>
           </div>
         )}

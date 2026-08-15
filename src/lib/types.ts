@@ -7,12 +7,14 @@ export type GoalStatus =
 export type Priority = "LOW" | "MEDIUM" | "HIGH";
 export type HabitFrequency = "DAILY" | "WEEKDAYS" | "WEEKENDS";
 export type ThemePreference = "system" | "light" | "dark";
+export type Language = "en" | "ru" | "uz";
 
 export interface User {
   id: string;
   name: string;
   email: string;
   theme: ThemePreference;
+  language: Language;
   xp: number;
   level: number;
   globalStreak: number;

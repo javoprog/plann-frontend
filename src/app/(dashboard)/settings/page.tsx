@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Loader2, Palette, ShieldCheck, UserRound } from "lucide-react";
+import { Languages, Loader2, Palette, ShieldCheck, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useLanguage } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,7 +22,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { api, getApiError } from "@/lib/api";
-import type { ThemePreference, User } from "@/lib/types";
+import type { Language, ThemePreference, User } from "@/lib/types";
 
 const themeLabels: Record<ThemePreference, string> = {
   system: "System",
@@ -31,9 +32,11 @@ const themeLabels: Record<ThemePreference, string> = {
 
 export default function SettingsPage() {
   const { user, updateUser, changeTheme } = useAuth();
+  const { language, t, changeLanguage } = useLanguage();
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [isSavingTheme, setIsSavingTheme] = useState(false);
+  const [isSavingLanguage, setIsSavingLanguage] = useState(false);
 
   if (!user) return null;
 
@@ -95,13 +98,28 @@ export default function SettingsPage() {
     }
   }
 
+  async function updateLanguage(language: Language) {
+    if (isSavingLanguage) return;
+    setIsSavingLanguage(true);
+    try {
+      await changeLanguage(language);
+      toast.success("Language updated");
+    } catch (error) {
+      toast.error(getApiError(error));
+    } finally {
+      setIsSavingLanguage(false);
+    }
+  }
+
   return (
     <div className="flex flex-col space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {t("settings.title")}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Manage your account settings and preferences
+            {t("settings.description")}
           </p>
         </div>
         <div />
@@ -113,9 +131,9 @@ export default function SettingsPage() {
             <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <UserRound className="size-5" />
             </div>
-            <CardTitle>Profile Information</CardTitle>
+            <CardTitle>{t("settings.profile")}</CardTitle>
             <CardDescription>
-              Update the name and email attached to your account.
+              {t("settings.profileDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -125,7 +143,7 @@ export default function SettingsPage() {
               onSubmit={saveProfile}
             >
               <div className="space-y-2">
-                <Label htmlFor="settings-name">Name</Label>
+                <Label htmlFor="settings-name">{t("settings.name")}</Label>
                 <Input
                   id="settings-name"
                   name="name"
@@ -137,7 +155,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="settings-email">Email</Label>
+                <Label htmlFor="settings-email">{t("settings.email")}</Label>
                 <Input
                   id="settings-email"
                   name="email"
@@ -149,7 +167,7 @@ export default function SettingsPage() {
               </div>
               <Button type="submit" disabled={isSavingProfile}>
                 {isSavingProfile && <Loader2 className="size-4 animate-spin" />}
-                Save Profile
+                {t("settings.saveProfile")}
               </Button>
             </form>
           </CardContent>
@@ -160,13 +178,13 @@ export default function SettingsPage() {
             <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Palette className="size-5" />
             </div>
-            <CardTitle>Appearance</CardTitle>
+            <CardTitle>{t("settings.appearance")}</CardTitle>
             <CardDescription>
-              Choose how Plann looks. Your preference is saved to your account.
+              {t("settings.appearanceDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Label>Theme</Label>
+            <Label>{t("settings.theme")}</Label>
             <Select
               value={user.theme}
               disabled={isSavingTheme}
@@ -175,12 +193,12 @@ export default function SettingsPage() {
               }
             >
               <SelectTrigger className="w-full">
-                <span>{themeLabels[user.theme]}</span>
+                <span>{t(`settings.${user.theme}`)}</span>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="system">System</SelectItem>
-                <SelectItem value="light">Light</SelectItem>
-                <SelectItem value="dark">Dark</SelectItem>
+                <SelectItem value="system">{t("settings.system")}</SelectItem>
+                <SelectItem value="light">{t("settings.light")}</SelectItem>
+                <SelectItem value="dark">{t("settings.dark")}</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
@@ -189,20 +207,53 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Languages className="size-5" />
+            </div>
+            <CardTitle>{t("settings.language")}</CardTitle>
+            <CardDescription>
+              {t("settings.languageDescription")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Label>{t("settings.language")}</Label>
+            <Select
+              value={language}
+              disabled={isSavingLanguage}
+              onValueChange={(value) =>
+                void updateLanguage(value as Language)
+              }
+            >
+              <SelectTrigger className="w-full">
+                <span>{language.toUpperCase()}</span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">English (EN)</SelectItem>
+                <SelectItem value="ru">Русский (RU)</SelectItem>
+                <SelectItem value="uz">O‘zbekcha (UZ)</SelectItem>
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+
         <Card className="xl:col-span-2">
           <CardHeader>
             <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <ShieldCheck className="size-5" />
             </div>
-            <CardTitle>Security</CardTitle>
+            <CardTitle>{t("settings.security")}</CardTitle>
             <CardDescription>
-              Change your password after confirming your current one.
+              {t("settings.securityDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form className="grid gap-4 sm:grid-cols-2" onSubmit={updatePassword}>
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="current-password">Current Password</Label>
+                <Label htmlFor="current-password">
+                  {t("settings.currentPassword")}
+                </Label>
                 <Input
                   id="current-password"
                   name="currentPassword"
@@ -214,7 +265,9 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="new-password">New Password</Label>
+                <Label htmlFor="new-password">
+                  {t("settings.newPassword")}
+                </Label>
                 <Input
                   id="new-password"
                   name="newPassword"
@@ -226,7 +279,9 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <Label htmlFor="confirm-password">
+                  {t("settings.confirmPassword")}
+                </Label>
                 <Input
                   id="confirm-password"
                   name="confirmPassword"
@@ -242,7 +297,7 @@ export default function SettingsPage() {
                   {isSavingPassword && (
                     <Loader2 className="size-4 animate-spin" />
                   )}
-                  Update Password
+                  {t("settings.updatePassword")}
                 </Button>
               </div>
             </form>

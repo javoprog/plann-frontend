@@ -1,8 +1,12 @@
 import type { GoalStatus } from "@/lib/types";
 
-export function formatDate(value?: string | null) {
-  if (!value) return "No due date";
-  return new Intl.DateTimeFormat("en", {
+export function formatDate(
+  value?: string | null,
+  locale = "en",
+  emptyLabel = "No due date",
+) {
+  if (!value) return emptyLabel;
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     year: "numeric",

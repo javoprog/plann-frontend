@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ export function SubtaskChecklist({
   onChange,
   onSettled,
 }: SubtaskChecklistProps) {
+  const { t } = useLanguage();
   const [title, setTitle] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const subtasks = task.subtasks ?? [];
@@ -90,7 +92,7 @@ export function SubtaskChecklist({
   return (
     <div className="mt-3 border-t pt-3">
       <p className="mb-2 text-xs font-medium text-muted-foreground">
-        {completed}/{subtasks.length} subtasks
+        {t("tasks.subtasks", { completed, total: subtasks.length })}
       </p>
       {subtasks.length > 0 && (
         <div className="mb-2 space-y-1">
@@ -130,7 +132,7 @@ export function SubtaskChecklist({
           className="h-8 text-xs"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          placeholder="Add a subtask"
+          placeholder={t("tasks.addSubtask")}
           maxLength={200}
           aria-label="New subtask title"
           onKeyDown={(event) => {

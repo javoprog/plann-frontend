@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CalendarDays, X } from "lucide-react";
+import { useLanguage } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -24,6 +25,7 @@ export function DatePicker({
   onChange,
   placeholder = "Pick a date",
 }: DatePickerProps) {
+  const { language, t } = useLanguage();
   const [open, setOpen] = useState(false);
 
   return (
@@ -43,14 +45,19 @@ export function DatePicker({
       >
         <CalendarDays className="size-4" />
         {value
-          ? new Intl.DateTimeFormat("en", {
+          ? new Intl.DateTimeFormat(language, {
               month: "short",
               day: "numeric",
               year: "numeric",
             }).format(value)
           : placeholder}
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto">
+      <PopoverContent
+        side="bottom"
+        sideOffset={4}
+        align="start"
+        className="w-auto"
+      >
         <Calendar
           mode="single"
           selected={value}
@@ -71,7 +78,7 @@ export function DatePicker({
               setOpen(false);
             }}
           >
-            <X className="size-3.5" /> Clear date
+            <X className="size-3.5" /> {t("actions.clearDate")}
           </Button>
         )}
       </PopoverContent>

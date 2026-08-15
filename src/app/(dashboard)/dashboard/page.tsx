@@ -16,7 +16,9 @@ import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { MonthlyDots } from "@/components/habits/monthly-dots";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { useLanguage } from "@/components/providers/language-provider";
+import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -31,10 +33,12 @@ import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { user, refreshUser } = useAuth();
+  const { language, t } = useLanguage();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [taskFormOpen, setTaskFormOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -156,19 +160,22 @@ export default function DashboardPage() {
 
   const summaryCards = [
     {
-      label: "Active goals",
+      label: t("dashboard.activeGoals"),
       value: activeGoals.length,
-      hint: `${goals.length} total goals`,
+      hint: t("dashboard.totalGoals", { count: goals.length }),
       icon: Target,
     },
     {
-      label: "Overall completion",
+      label: t("dashboard.overallCompletion"),
       value: `${overallCompletion}%`,
-      hint: `${completedTasks} of ${totalTasks} linked tasks`,
+      hint: t("dashboard.linkedTasks", {
+        completed: completedTasks,
+        total: totalTasks,
+      }),
       icon: TrendingUp,
     },
     {
-      label: "Pending today",
+      label: t("dashboard.pendingToday"),
       value: pendingToday.length,
       hint: pendingToday.length === 1 ? "task needs attention" : "tasks need attention",
       icon: Clock3,
@@ -179,24 +186,28 @@ export default function DashboardPage() {
     <div className="flex flex-col space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {t("dashboard.title")}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            A focused view of what is moving and what needs your attention.
+            {t("dashboard.description")}
           </p>
         </div>
         <div>
-          <Link href="/tasks?create=true" className={buttonVariants()}>
-            <Plus className="size-4" /> New Task
-          </Link>
+          <Button onClick={() => setTaskFormOpen(true)}>
+            <Plus className="size-4" /> {t("actions.newTask")}
+          </Button>
         </div>
       </div>
 
       <Card className="border-primary/20 bg-primary/5">
         <CardContent>
           <p className="text-base font-medium">
-            Good day, {user?.name ?? "Planner"}! Tasks pending today:{" "}
-            {pendingToday.length}. Global Activity Streak: &#128293;{" "}
-            {user?.globalStreak ?? 0} days!
+            {t("dashboard.greeting", {
+              name: user?.name ?? "Planner",
+              count: pendingToday.length,
+              streak: user?.globalStreak ?? 0,
+            })}
           </p>
         </CardContent>
       </Card>
@@ -222,7 +233,9 @@ export default function DashboardPage() {
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm text-muted-foreground">Current level</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("dashboard.currentLevel")}
+                </p>
                 <p className="mt-2 text-3xl font-bold tracking-tight">
                   {isLoading ? "..." : user?.level ?? 1}
                 </p>
@@ -233,8 +246,10 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{user?.xp ?? 0} XP total</span>
-                <span>{user?.xpToNextLevel ?? 100} to next</span>
+                <span>{t("dashboard.xpTotal", { xp: user?.xp ?? 0 })}</span>
+                <span>
+                  {t("dashboard.toNext", { xp: user?.xpToNextLevel ?? 100 })}
+                </span>
               </div>
               <Progress value={(user?.xp ?? 0) % 100} />
             </div>
@@ -246,16 +261,16 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex-row items-center justify-between">
             <div>
-              <CardTitle>Active goals</CardTitle>
+              <CardTitle>{t("dashboard.activeGoals")}</CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">
-                The outcomes currently in motion.
+                {t("dashboard.outcomesInMotion")}
               </p>
             </div>
             <Link
               href="/goals"
               className="flex items-center gap-1 text-sm font-medium hover:underline"
             >
-              View all <ArrowRight className="size-4" />
+              {t("actions.viewAll")} <ArrowRight className="size-4" />
             </Link>
           </CardHeader>
           <CardContent>
@@ -269,7 +284,7 @@ export default function DashboardPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 {activeGoals.slice(0, 4).map((goal) => (
                   <Link
-                    href="/goals"
+                    href={`/goals/${goal.id}`}
                     key={goal.id}
                     className="rounded-xl border p-4 transition-colors hover:bg-muted/40"
                   >
@@ -288,7 +303,9 @@ export default function DashboardPage() {
             ) : (
               <div className="flex min-h-56 flex-col items-center justify-center rounded-xl border border-dashed text-center">
                 <Target className="size-7 text-muted-foreground" />
-                <p className="mt-3 font-medium">No active goals yet</p>
+                <p className="mt-3 font-medium">
+                  {t("dashboard.noActiveGoals")}
+                </p>
                 <Link className="mt-2 text-sm text-muted-foreground hover:underline" href="/goals?create=true">
                   Create your first goal
                 </Link>
@@ -299,9 +316,11 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Quick task checklist</CardTitle>
+            <CardTitle>{t("dashboard.quickChecklist")}</CardTitle>
             <p className="text-sm text-muted-foreground">
-              {pendingToday.length ? "Due today" : "Your next open tasks"}
+              {pendingToday.length
+                ? t("dashboard.dueToday")
+                : t("dashboard.nextOpenTasks")}
             </p>
           </CardHeader>
           <CardContent>
@@ -335,7 +354,12 @@ export default function DashboardPage() {
                         {task.title}
                       </span>
                       <span className="mt-0.5 block text-xs text-muted-foreground">
-                        {task.goal?.title ?? "Standalone"} · {formatDate(task.dueDate)}
+                        {task.goal?.title ?? t("common.standalone")} ·{" "}
+                        {formatDate(
+                          task.dueDate,
+                          language,
+                          t("common.noDueDate"),
+                        )}
                       </span>
                     </span>
                   </label>
@@ -344,7 +368,9 @@ export default function DashboardPage() {
             ) : (
               <div className="flex min-h-56 flex-col items-center justify-center text-center">
                 <CheckCircle2 className="size-8 text-emerald-500" />
-                <p className="mt-3 font-medium">You are all caught up</p>
+                <p className="mt-3 font-medium">
+                  {t("dashboard.allCaughtUp")}
+                </p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Add a task when you are ready for the next step.
                 </p>
@@ -357,16 +383,16 @@ export default function DashboardPage() {
       <Card>
         <CardHeader className="flex-row items-center justify-between">
           <div>
-            <CardTitle>Today&apos;s habits</CardTitle>
+            <CardTitle>{t("dashboard.todaysHabits")}</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Small rituals scheduled for today.
+              {t("dashboard.ritualsToday")}
             </p>
           </div>
           <Link
             href="/habits"
             className="flex items-center gap-1 text-sm font-medium hover:underline"
           >
-            View all <ArrowRight className="size-4" />
+            {t("actions.viewAll")} <ArrowRight className="size-4" />
           </Link>
         </CardHeader>
         <CardContent>
@@ -396,7 +422,9 @@ export default function DashboardPage() {
                           {habit.title}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {habit.currentStreak} day streak
+                          {t("common.dayStreak", {
+                            count: habit.currentStreak,
+                          })}
                         </p>
                       </div>
                       <Button
@@ -415,11 +443,26 @@ export default function DashboardPage() {
             </div>
           ) : (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              No habits are scheduled today.
+              {t("dashboard.noHabitsToday")}
             </p>
           )}
         </CardContent>
       </Card>
+
+      <TaskFormDialog
+        key={`dashboard-task-${taskFormOpen}`}
+        open={taskFormOpen}
+        onOpenChange={setTaskFormOpen}
+        goals={goals}
+        onTaskChanged={(updatedTask) =>
+          setTasks((current) =>
+            current.map((task) =>
+              task.id === updatedTask.id ? updatedTask : task,
+            ),
+          )
+        }
+        onSaved={() => void loadData()}
+      />
     </div>
   );
 }

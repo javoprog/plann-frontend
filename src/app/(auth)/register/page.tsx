@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useLanguage } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,6 +22,7 @@ import { getApiError } from "@/lib/api";
 export default function RegisterPage() {
   const router = useRouter();
   const { register, user, isLoading } = useAuth();
+  const { t } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -57,15 +59,17 @@ export default function RegisterPage() {
   return (
     <Card className="border-border/70 shadow-xl shadow-black/5">
       <CardHeader className="space-y-2 text-center">
-        <CardTitle className="text-2xl">Create your account</CardTitle>
+        <CardTitle className="text-2xl">
+          {t("auth.registerTitle")}
+        </CardTitle>
         <CardDescription>
-          Start with a clear view of what matters and what comes next.
+          {t("auth.registerDescription")}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">{t("settings.name")}</Label>
             <Input
               id="name"
               name="name"
@@ -76,7 +80,7 @@ export default function RegisterPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("settings.email")}</Label>
             <Input
               id="email"
               name="email"
@@ -88,7 +92,7 @@ export default function RegisterPage() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("auth.password")}</Label>
               <Input
                 id="password"
                 name="password"
@@ -100,7 +104,7 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm</Label>
+              <Label htmlFor="confirmPassword">{t("auth.confirm")}</Label>
               <Input
                 id="confirmPassword"
                 name="confirmPassword"
@@ -117,15 +121,15 @@ export default function RegisterPage() {
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <>
-                Create account <ArrowRight className="size-4" />
+                {t("auth.createAccount")} <ArrowRight className="size-4" />
               </>
             )}
           </Button>
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
+          {t("auth.alreadyAccount")}{" "}
           <Link className="font-medium text-foreground hover:underline" href="/login">
-            Sign in
+            {t("auth.signIn")}
           </Link>
         </p>
       </CardContent>

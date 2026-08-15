@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useLanguage } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,6 +22,7 @@ import { getApiError } from "@/lib/api";
 export default function LoginPage() {
   const router = useRouter();
   const { login, user, isLoading } = useAuth();
+  const { t } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -45,15 +47,15 @@ export default function LoginPage() {
   return (
     <Card className="border-border/70 shadow-xl shadow-black/5">
       <CardHeader className="space-y-2 text-center">
-        <CardTitle className="text-2xl">Welcome back</CardTitle>
+        <CardTitle className="text-2xl">{t("auth.welcome")}</CardTitle>
         <CardDescription>
-          Sign in to continue turning your plans into progress.
+          {t("auth.loginDescription")}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("settings.email")}</Label>
             <Input
               id="email"
               name="email"
@@ -64,7 +66,7 @@ export default function LoginPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t("auth.password")}</Label>
             <Input
               id="password"
               name="password"
@@ -80,15 +82,15 @@ export default function LoginPage() {
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <>
-                Sign in <ArrowRight className="size-4" />
+                {t("auth.signIn")} <ArrowRight className="size-4" />
               </>
             )}
           </Button>
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          New to Plann?{" "}
+          {t("auth.newToPlann")}{" "}
           <Link className="font-medium text-foreground hover:underline" href="/register">
-            Create an account
+            {t("auth.createAccount")}
           </Link>
         </p>
       </CardContent>

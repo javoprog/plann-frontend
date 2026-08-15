@@ -13,8 +13,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { StatusBadge } from "@/components/dashboard/status-badge";
-import { GoalDetailDialog } from "@/components/goals/goal-detail-dialog";
 import { GoalFormDialog } from "@/components/goals/goal-form-dialog";
+import { useLanguage } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -38,6 +38,7 @@ type StatusFilter = GoalStatus | "all";
 
 function GoalsContent() {
   const { refreshUser } = useAuth();
+  const { language, t } = useLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
   const categoryId = searchParams.get("categoryId") ?? "all";
@@ -48,7 +49,6 @@ function GoalsContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
-  const [detailGoalId, setDetailGoalId] = useState<string | null>(null);
 
   const loadGoals = useCallback(async () => {
     setIsLoading(true);
@@ -118,14 +118,16 @@ function GoalsContent() {
     <div className="flex flex-col space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Goals</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {t("goals.title")}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Shape meaningful outcomes and keep an eye on the work behind them.
+            {t("goals.description")}
           </p>
         </div>
         <div>
           <Button onClick={createGoal}>
-            <Plus className="size-4" /> Create Goal
+            <Plus className="size-4" /> {t("actions.createGoal")}
           </Button>
         </div>
       </div>
@@ -138,13 +140,13 @@ function GoalsContent() {
           <SelectTrigger className="w-full sm:w-52">
             <span className="truncate">
               {categoryId === "all"
-                ? "All categories"
+                ? t("goals.allCategories")
                 : categories.find((category) => category.id === categoryId)?.name ??
-                  "All categories"}
+                  t("goals.allCategories")}
             </span>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All categories</SelectItem>
+            <SelectItem value="all">{t("goals.allCategories")}</SelectItem>
             {categories.map((category) => (
               <SelectItem key={category.id} value={category.id}>
                 {category.name}
@@ -156,18 +158,24 @@ function GoalsContent() {
           <SelectTrigger className="w-full sm:w-52">
             <span className="truncate">
               {status === "all"
-                ? "All statuses"
-                : status === "IN_PROGRESS"
-                  ? "In progress"
-                  : status.charAt(0) + status.slice(1).toLowerCase()}
+                ? t("goals.allStatuses")
+                : t(
+                    status === "PLANNED"
+                      ? "status.planned"
+                      : status === "IN_PROGRESS"
+                        ? "status.inProgress"
+                        : status === "COMPLETED"
+                          ? "status.completed"
+                          : "status.cancelled",
+                  )}
             </span>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="PLANNED">Planned</SelectItem>
-            <SelectItem value="IN_PROGRESS">In progress</SelectItem>
-            <SelectItem value="COMPLETED">Completed</SelectItem>
-            <SelectItem value="CANCELLED">Cancelled</SelectItem>
+            <SelectItem value="all">{t("goals.allStatuses")}</SelectItem>
+            <SelectItem value="PLANNED">{t("status.planned")}</SelectItem>
+            <SelectItem value="IN_PROGRESS">{t("status.inProgress")}</SelectItem>
+            <SelectItem value="COMPLETED">{t("status.completed")}</SelectItem>
+            <SelectItem value="CANCELLED">{t("status.cancelled")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -186,9 +194,9 @@ function GoalsContent() {
               role="button"
               tabIndex={0}
               className="cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md"
-              onClick={() => setDetailGoalId(goal.id)}
+              onClick={() => router.push(`/goals/${goal.id}`)}
               onKeyDown={(event) => {
-                if (event.key === "Enter") setDetailGoalId(goal.id);
+                if (event.key === "Enter") router.push(`/goals/${goal.id}`);
               }}
             >
               <CardHeader>
@@ -211,10 +219,10 @@ function GoalsContent() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => editGoal(goal)}>
-                          <Pencil className="size-4" /> Edit
+                          <Pencil className="size-4" /> {t("actions.edit")}
                         </DropdownMenuItem>
                         <DropdownMenuItem variant="destructive" onClick={() => void deleteGoal(goal)}>
-                          <Trash2 className="size-4" /> Delete
+                          <Trash2 className="size-4" /> {t("actions.delete")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -223,7 +231,7 @@ function GoalsContent() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="line-clamp-2 min-h-10 text-sm text-muted-foreground">
-                  {goal.description || "No description added yet."}
+                  {goal.description || t("common.noDescription")}
                 </p>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
@@ -236,7 +244,11 @@ function GoalsContent() {
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <CalendarDays className="size-3.5" />
-                  {formatDate(goal.deadline)}
+                  {formatDate(
+                    goal.deadline,
+                    language,
+                    t("common.noDueDate"),
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -247,12 +259,12 @@ function GoalsContent() {
           <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
             <Target className="size-6 text-muted-foreground" />
           </span>
-          <h2 className="font-semibold">No goals found</h2>
+          <h2 className="font-semibold">{t("goals.noGoals")}</h2>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
             Create a goal or change your filters to see what you are working toward.
           </p>
           <Button className="mt-4" variant="outline" onClick={createGoal}>
-            <Plus className="size-4" /> Create your first goal
+            <Plus className="size-4" /> {t("actions.createGoal")}
           </Button>
         </div>
       )}
@@ -264,11 +276,6 @@ function GoalsContent() {
         categories={categories}
         goal={editingGoal}
         onSaved={() => void loadGoals()}
-      />
-      <GoalDetailDialog
-        goalId={detailGoalId}
-        onOpenChange={(open) => !open && setDetailGoalId(null)}
-        onChanged={() => void loadGoals()}
       />
     </div>
   );

@@ -25,7 +25,7 @@ export function celebrateHabitCompletion() {
     spread: 50,
     startVelocity: 20,
     scalar: 0.65,
-    origin: { x: 0.82, y: 0.72 },
+    origin: { x: 0.5, y: 0.5 },
   });
 }
 

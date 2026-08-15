@@ -3,17 +3,19 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckSquare2, Flame, Search, Target } from "lucide-react";
+import { useLanguage } from "@/components/providers/language-provider";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import type { SearchResults } from "@/lib/types";
 
 const groups = [
-  { key: "goals", label: "Goals", href: "/goals", icon: Target },
-  { key: "tasks", label: "Tasks", href: "/tasks", icon: CheckSquare2 },
-  { key: "habits", label: "Habits", href: "/habits", icon: Flame },
+  { key: "goals", label: "nav.goals", href: "/goals", icon: Target },
+  { key: "tasks", label: "nav.tasks", href: "/tasks", icon: CheckSquare2 },
+  { key: "habits", label: "nav.habits", href: "/habits", icon: Flame },
 ] as const;
 
 export function GlobalSearch() {
+  const { t } = useLanguage();
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
   const [results, setResults] = useState<SearchResults | null>(null);
@@ -52,10 +54,10 @@ export function GlobalSearch() {
     <div className="relative w-full max-w-md">
       <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
       <Input
-        aria-label="Search goals, tasks, and habits"
+        aria-label={t("search.placeholder")}
         autoComplete="off"
         className="bg-muted/50 pl-9"
-        placeholder="Search goals, tasks, and habits…"
+        placeholder={t("search.placeholder")}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         onFocus={() => setFocused(true)}
@@ -69,7 +71,7 @@ export function GlobalSearch() {
         <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 max-h-96 overflow-y-auto rounded-xl border bg-popover p-2 text-popover-foreground shadow-lg">
           {results === null ? (
             <p className="px-3 py-5 text-center text-sm text-muted-foreground">
-              Searching…
+              {t("search.searching")}
             </p>
           ) : hasResults ? (
             <div className="space-y-3">
@@ -79,13 +81,17 @@ export function GlobalSearch() {
                 return (
                   <div key={group.key}>
                     <p className="px-2 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {group.label}
+                      {t(group.label)}
                     </p>
                     <div className="space-y-0.5">
                       {items.map((item) => (
                         <Link
                           key={item.id}
-                          href={group.href}
+                          href={
+                            group.key === "goals"
+                              ? `/goals/${item.id}`
+                              : group.href
+                          }
                           className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-muted"
                           onClick={() => {
                             setQuery("");
@@ -103,7 +109,7 @@ export function GlobalSearch() {
             </div>
           ) : (
             <p className="px-3 py-5 text-center text-sm text-muted-foreground">
-              No matching goals, tasks, or habits.
+              {t("search.noResults")}
             </p>
           )}
         </div>

@@ -1,4 +1,7 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/components/providers/language-provider";
 import type { Priority } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -16,12 +19,18 @@ export function PriorityBadge({
   priority: Priority;
   className?: string;
 }) {
+  const { t } = useLanguage();
+  const labels = {
+    LOW: t("priority.low"),
+    MEDIUM: t("priority.medium"),
+    HIGH: t("priority.high"),
+  };
   return (
     <Badge
       variant="outline"
       className={cn(priorityClasses[priority], className)}
     >
-      {priority.charAt(0) + priority.slice(1).toLowerCase()}
+      {labels[priority]}
     </Badge>
   );
 }
