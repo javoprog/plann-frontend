@@ -6,11 +6,13 @@ export type GoalStatus =
 
 export type Priority = "LOW" | "MEDIUM" | "HIGH";
 export type HabitFrequency = "DAILY" | "WEEKDAYS" | "WEEKENDS";
+export type ThemePreference = "system" | "light" | "dark";
 
 export interface User {
   id: string;
   name: string;
   email: string;
+  theme: ThemePreference;
 }
 
 export interface Category {

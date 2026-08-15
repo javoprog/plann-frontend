@@ -9,6 +9,7 @@ import {
   Flame,
   LogOut,
   Plus,
+  Settings,
   Target,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -23,6 +24,7 @@ const navigation = [
   { name: "Goals", href: "/goals", icon: Target },
   { name: "Tasks", href: "/tasks", icon: CheckSquare2 },
   { name: "Habits", href: "/habits", icon: Flame },
+  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 export default function DashboardLayout({
