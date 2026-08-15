@@ -22,15 +22,12 @@ export function withSubtaskCompletion(
   return {
     ...task,
     subtasks,
-    isCompleted:
-      subtasks.length > 0 && subtasks.every((subtask) => subtask.isCompleted),
   };
 }
 
 export function withAddedSubtask(task: Task, subtask: Subtask): Task {
   return {
     ...task,
-    isCompleted: false,
     subtasks: [...(task.subtasks ?? []), subtask],
   };
 }
@@ -42,9 +39,5 @@ export function withoutSubtask(task: Task, subtaskId: string): Task {
   return {
     ...task,
     subtasks,
-    isCompleted:
-      subtasks.length > 0
-        ? subtasks.every((subtask) => subtask.isCompleted)
-        : task.isCompleted,
   };
 }

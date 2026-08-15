@@ -9,12 +9,14 @@ import {
   Check,
   Flame,
   Plus,
+  Sparkles,
   Target,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { StatusBadge } from "@/components/dashboard/status-badge";
+import { AiBreakdownDialog } from "@/components/goals/ai-breakdown-dialog";
 import { HabitFormDialog } from "@/components/habits/habit-form-dialog";
 import { MonthlyDots } from "@/components/habits/monthly-dots";
 import { useLanguage } from "@/components/providers/language-provider";
@@ -47,6 +49,7 @@ function GoalPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [habitFormOpen, setHabitFormOpen] = useState(false);
+  const [aiBreakdownOpen, setAiBreakdownOpen] = useState(false);
   const today = getLocalDateKey();
 
   const loadData = useCallback(async () => {
@@ -183,12 +186,17 @@ function GoalPageContent() {
                 </p>
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm">
-              <CalendarDays className="size-4 text-muted-foreground" />
-              <span>
-                {t("goals.targetDeadline")}:{" "}
-                {formatDate(goal.deadline, language, t("common.noDueDate"))}
-              </span>
+            <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+              <Button onClick={() => setAiBreakdownOpen(true)}>
+                <Sparkles className="size-4" /> {t("aiBreakdown")}
+              </Button>
+              <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm">
+                <CalendarDays className="size-4 text-muted-foreground" />
+                <span>
+                  {t("goals.targetDeadline")}:{" "}
+                  {formatDate(goal.deadline, language, t("common.noDueDate"))}
+                </span>
+              </div>
             </div>
           </div>
           <div className="space-y-2">
@@ -350,6 +358,18 @@ function GoalPageContent() {
         goals={goals}
         defaultGoalId={goal.id}
         onSaved={() => void loadData()}
+      />
+      <AiBreakdownDialog
+        goalId={goal.id}
+        goalTitle={goal.title}
+        open={aiBreakdownOpen}
+        onOpenChange={setAiBreakdownOpen}
+        onApplied={async () => {
+          await loadData();
+          void refreshUser().catch((error: unknown) =>
+            toast.error(getApiError(error)),
+          );
+        }}
       />
     </div>
   );
