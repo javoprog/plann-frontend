@@ -105,8 +105,3 @@ export interface SearchResults {
   tasks: Task[];
   habits: Habit[];
 }
-
-export interface AiGoalPlan {
-  tasks: Array<{ title: string; priority: Priority }>;
-  habits: Array<{ title: string; frequency: HabitFrequency }>;
-}

@@ -8,6 +8,7 @@ import {
   CalendarDays,
   Check,
   Flame,
+  Loader2,
   Plus,
   Sparkles,
   Target,
@@ -16,7 +17,6 @@ import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { StatusBadge } from "@/components/dashboard/status-badge";
-import { AiBreakdownDialog } from "@/components/goals/ai-breakdown-dialog";
 import { HabitFormDialog } from "@/components/habits/habit-form-dialog";
 import { MonthlyDots } from "@/components/habits/monthly-dots";
 import { useLanguage } from "@/components/providers/language-provider";
@@ -38,6 +38,14 @@ import { withTaskCompletion } from "@/lib/task-completion";
 import type { Category, Goal, Habit, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+type AiPlanGenerationResponse =
+  | { status: "INSUFFICIENT_DATA"; message: string }
+  | {
+      status: "SUCCESS";
+      createdTasksCount: number;
+      createdHabitsCount: number;
+    };
+
 function GoalPageContent() {
   const { id } = useParams<{ id: string }>();
   const { refreshUser } = useAuth();
@@ -49,7 +57,7 @@ function GoalPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [habitFormOpen, setHabitFormOpen] = useState(false);
-  const [aiBreakdownOpen, setAiBreakdownOpen] = useState(false);
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const today = getLocalDateKey();
 
   const loadData = useCallback(async () => {
@@ -144,6 +152,29 @@ function GoalPageContent() {
     }
   }
 
+  async function generateAiPlan() {
+    if (isGeneratingAi) return;
+    setIsGeneratingAi(true);
+    try {
+      const { data } = await api.post<AiPlanGenerationResponse>(
+        `/goals/${id}/generate-ai-plan`,
+      );
+      if (data.status === "INSUFFICIENT_DATA") {
+        toast.error(t("ai.insufficientData"));
+        return;
+      }
+
+      celebrateGoalCompletion();
+      await loadData();
+    } catch (error) {
+      toast.error(getApiError(error));
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  }
+
+  const isGoalEmpty = (goal?.tasks?.length ?? 0) === 0 && habits.length === 0;
+
   if (isLoading) {
     return <div className="h-96 animate-pulse rounded-xl bg-muted" />;
   }
@@ -186,17 +217,12 @@ function GoalPageContent() {
                 </p>
               </div>
             </div>
-            <div className="flex shrink-0 flex-col gap-2 sm:items-end">
-              <Button onClick={() => setAiBreakdownOpen(true)}>
-                <Sparkles className="size-4" /> {t("aiBreakdown")}
-              </Button>
-              <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm">
-                <CalendarDays className="size-4 text-muted-foreground" />
-                <span>
-                  {t("goals.targetDeadline")}:{" "}
-                  {formatDate(goal.deadline, language, t("common.noDueDate"))}
-                </span>
-              </div>
+            <div className="flex shrink-0 items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm">
+              <CalendarDays className="size-4 text-muted-foreground" />
+              <span>
+                {t("goals.targetDeadline")}:{" "}
+                {formatDate(goal.deadline, language, t("common.noDueDate"))}
+              </span>
             </div>
           </div>
           <div className="space-y-2">
@@ -215,7 +241,43 @@ function GoalPageContent() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      {isGoalEmpty && (
+        <Card className="border-dashed">
+          <CardContent className="flex min-h-80 flex-col items-center justify-center px-6 py-12 text-center">
+            <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Sparkles className="size-7" />
+            </span>
+            <h2 className="mt-5 text-xl font-bold tracking-tight">
+              {t("ai.emptyTitle")}
+            </h2>
+            <p className="mt-2 max-w-lg text-sm text-muted-foreground">
+              {t("ai.emptySubtitle")}
+            </p>
+            <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Button
+                className={cn(
+                  "min-w-48",
+                  isGeneratingAi && "animate-pulse shadow-lg shadow-primary/30",
+                )}
+                disabled={isGeneratingAi}
+                onClick={() => void generateAiPlan()}
+              >
+                {isGeneratingAi && <Loader2 className="size-4 animate-spin" />}
+                {isGeneratingAi ? t("ai.generating") : t("generatePlan")}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={isGeneratingAi}
+                onClick={() => setTaskFormOpen(true)}
+              >
+                {t("actions.addTaskManually")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className={cn("grid gap-6 xl:grid-cols-2", isGoalEmpty && "hidden")}>
         <Card>
           <CardHeader className="flex-row items-center justify-between gap-3">
             <CardTitle>{t("goals.linkedTasks")}</CardTitle>
@@ -358,18 +420,6 @@ function GoalPageContent() {
         goals={goals}
         defaultGoalId={goal.id}
         onSaved={() => void loadData()}
-      />
-      <AiBreakdownDialog
-        goalId={goal.id}
-        goalTitle={goal.title}
-        open={aiBreakdownOpen}
-        onOpenChange={setAiBreakdownOpen}
-        onApplied={async () => {
-          await loadData();
-          void refreshUser().catch((error: unknown) =>
-            toast.error(getApiError(error)),
-          );
-        }}
       />
     </div>
   );

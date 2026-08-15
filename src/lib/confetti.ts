@@ -29,16 +29,6 @@ export function celebrateHabitCompletion() {
   });
 }
 
-export function celebratePlanApplied() {
-  if (prefersReducedMotion()) return;
-  void confetti({
-    particleCount: 90,
-    spread: 75,
-    startVelocity: 35,
-    origin: { x: 0.5, y: 0.6 },
-  });
-}
-
 export function celebrateNewlyCompletedGoals(
   previousGoals: Goal[],
   nextGoals: Goal[],
