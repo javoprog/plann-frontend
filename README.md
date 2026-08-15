@@ -18,7 +18,7 @@ Next.js App Router frontend for the Plann personal planning MVP. It includes JWT
    npm run dev
    ```
 
-Open `http://localhost:3000`. Start the backend first so authentication and planning data are available.
+Open `http://localhost:2009`. Start the backend first so authentication and planning data are available.
 
 ## Commands
 
