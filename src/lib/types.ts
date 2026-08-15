@@ -5,6 +5,7 @@ export type GoalStatus =
   | "CANCELLED";
 
 export type Priority = "LOW" | "MEDIUM" | "HIGH";
+export type HabitFrequency = "DAILY" | "WEEKDAYS" | "WEEKENDS";
 
 export interface User {
   id: string;
@@ -33,6 +34,16 @@ export interface Task {
     title: string;
     category?: Category | null;
   } | null;
+  subtasks?: Subtask[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Subtask {
+  id: string;
+  title: string;
+  isCompleted: boolean;
+  taskId: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -56,4 +67,33 @@ export interface Goal {
 export interface AuthResponse {
   token: string;
   user: User;
+}
+
+export interface HabitLog {
+  id?: string;
+  habitId: string;
+  date: string;
+  completed: boolean;
+  createdAt?: string;
+}
+
+export interface Habit {
+  id: string;
+  title: string;
+  description?: string | null;
+  frequency: HabitFrequency;
+  goalId?: string | null;
+  goal?: { id: string; title: string } | null;
+  categoryId?: string | null;
+  category?: Category | null;
+  logs: HabitLog[];
+  currentStreak: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SearchResults {
+  goals: Goal[];
+  tasks: Task[];
+  habits: Habit[];
 }

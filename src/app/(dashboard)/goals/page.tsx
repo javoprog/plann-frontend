@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarDays, MoreHorizontal, Pencil, Plus, Target, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
@@ -28,10 +35,13 @@ import type { Category, Goal, GoalStatus } from "@/lib/types";
 
 type StatusFilter = GoalStatus | "all";
 
-export default function GoalsPage() {
+function GoalsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const categoryId = searchParams.get("categoryId") ?? "all";
+  const handledCreate = useRef(false);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [categoryId, setCategoryId] = useState("all");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -56,20 +66,16 @@ export default function GoalsPage() {
   }, [categoryId, status]);
 
   useEffect(() => {
-    async function initializeFromUrl() {
-      await Promise.resolve();
-      const params = new URLSearchParams(window.location.search);
-      const initialCategory = params.get("categoryId");
-      if (initialCategory) setCategoryId(initialCategory);
-      if (params.get("create") === "true") setFormOpen(true);
+    if (searchParams.get("create") === "true" && !handledCreate.current) {
+      handledCreate.current = true;
+      queueMicrotask(() => setFormOpen(true));
     }
-    void initializeFromUrl();
 
     api
       .get<Category[]>("/categories")
       .then(({ data }) => setCategories(data))
       .catch((error: unknown) => toast.error(getApiError(error)));
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     queueMicrotask(() => void loadGoals());
@@ -78,6 +84,13 @@ export default function GoalsPage() {
   function createGoal() {
     setEditingGoal(null);
     setFormOpen(true);
+  }
+
+  function changeCategory(value: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === "all") params.delete("categoryId");
+    else params.set("categoryId", value);
+    router.push(`/goals${params.size ? `?${params.toString()}` : ""}`);
   }
 
   function editGoal(goal: Goal) {
@@ -113,7 +126,10 @@ export default function GoalsPage() {
       </div>
 
       <div className="flex flex-col gap-3 rounded-xl border bg-background p-3 sm:flex-row">
-        <Select value={categoryId} onValueChange={(value) => setCategoryId(String(value))}>
+        <Select
+          value={categoryId}
+          onValueChange={(value) => changeCategory(String(value))}
+        >
           <SelectTrigger className="w-full sm:w-52">
             <span className="truncate">
               {categoryId === "all"
@@ -250,5 +266,15 @@ export default function GoalsPage() {
         onChanged={() => void loadGoals()}
       />
     </div>
+  );
+}
+
+export default function GoalsPage() {
+  return (
+    <Suspense
+      fallback={<div className="h-72 animate-pulse rounded-xl bg-muted" />}
+    >
+      <GoalsContent />
+    </Suspense>
   );
 }

@@ -4,37 +4,42 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
+  Check,
   CheckCircle2,
   Clock3,
+  Flame,
   Plus,
   Target,
   TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { api, getApiError } from "@/lib/api";
-import { formatDate, isToday } from "@/lib/format";
-import type { Goal, Task } from "@/lib/types";
+import { formatDate, getLocalDateKey, isToday } from "@/lib/format";
+import type { Goal, Habit, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [goalsResponse, tasksResponse] = await Promise.all([
+      const [goalsResponse, tasksResponse, habitsResponse] = await Promise.all([
         api.get<Goal[]>("/goals"),
         api.get<Task[]>("/tasks"),
+        api.get<Habit[]>("/habits"),
       ]);
       setGoals(goalsResponse.data);
       setTasks(tasksResponse.data);
+      setHabits(habitsResponse.data);
     } catch (error) {
       toast.error(getApiError(error));
     } finally {
@@ -67,6 +72,13 @@ export default function DashboardPage() {
   const quickTasks = pendingToday.length
     ? pendingToday.slice(0, 6)
     : tasks.filter((task) => !task.isCompleted).slice(0, 6);
+  const todayKey = getLocalDateKey();
+  const weekday = new Date().getDay();
+  const todayHabits = habits.filter((habit) => {
+    if (habit.frequency === "WEEKDAYS") return weekday >= 1 && weekday <= 5;
+    if (habit.frequency === "WEEKENDS") return weekday === 0 || weekday === 6;
+    return true;
+  });
 
   async function toggleTask(task: Task, isCompleted: boolean) {
     setTasks((current) =>
@@ -85,6 +97,37 @@ export default function DashboardPage() {
             ? { ...item, isCompleted: task.isCompleted }
             : item,
         ),
+      );
+      toast.error(getApiError(error));
+    }
+  }
+
+  async function toggleHabit(habit: Habit) {
+    const wasCompleted = habit.logs.some(
+      (log) => log.date === todayKey && log.completed,
+    );
+    setHabits((current) =>
+      current.map((item) =>
+        item.id === habit.id
+          ? {
+              ...item,
+              logs: wasCompleted
+                ? item.logs.filter((log) => log.date !== todayKey)
+                : [
+                    ...item.logs,
+                    { habitId: item.id, date: todayKey, completed: true },
+                  ],
+            }
+          : item,
+      ),
+    );
+    try {
+      await api.post(`/habits/${habit.id}/toggle`, { date: todayKey });
+      const { data } = await api.get<Habit[]>("/habits");
+      setHabits(data);
+    } catch (error) {
+      setHabits((current) =>
+        current.map((item) => (item.id === habit.id ? habit : item)),
       );
       toast.error(getApiError(error));
     }
@@ -257,6 +300,68 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <div>
+            <CardTitle>Today&apos;s habits</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Small rituals scheduled for today.
+            </p>
+          </div>
+          <Link
+            href="/habits"
+            className="flex items-center gap-1 text-sm font-medium hover:underline"
+          >
+            View all <ArrowRight className="size-4" />
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2].map((item) => (
+                <div key={item} className="h-16 animate-pulse rounded-lg bg-muted" />
+              ))}
+            </div>
+          ) : todayHabits.length ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {todayHabits.map((habit) => {
+                const completedToday = habit.logs.some(
+                  (log) => log.date === todayKey && log.completed,
+                );
+                return (
+                  <div
+                    key={habit.id}
+                    className="flex items-center gap-3 rounded-lg border p-3"
+                  >
+                    <span className="flex size-9 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
+                      <Flame className="size-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{habit.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {habit.currentStreak} day streak
+                      </p>
+                    </div>
+                    <Button
+                      size="icon-sm"
+                      variant={completedToday ? "default" : "outline"}
+                      onClick={() => void toggleHabit(habit)}
+                      aria-label={`${completedToday ? "Undo" : "Complete"} ${habit.title}`}
+                    >
+                      <Check className="size-4" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No habits are scheduled today.
+            </p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

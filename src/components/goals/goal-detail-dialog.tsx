@@ -5,6 +5,7 @@ import { CalendarDays, CheckCircle2, Circle } from "lucide-react";
 import { toast } from "sonner";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { StatusBadge } from "@/components/dashboard/status-badge";
+import { SubtaskChecklist } from "@/components/tasks/subtask-checklist";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -16,7 +17,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { api, getApiError } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import type { Goal } from "@/lib/types";
+import type { Goal, Subtask } from "@/lib/types";
 
 interface GoalDetailDialogProps {
   goalId: string | null;
@@ -60,6 +61,18 @@ export function GoalDetailDialog({
     }
   }
 
+  function updateSubtasks(taskId: string, subtasks: Subtask[]) {
+    setGoal((current) => {
+      if (!current?.tasks) return current;
+      return {
+        ...current,
+        tasks: current.tasks.map((task) =>
+          task.id === taskId ? { ...task, subtasks } : task,
+        ),
+      };
+    });
+  }
+
   return (
     <Dialog open={Boolean(goalId)} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
@@ -101,31 +114,40 @@ export function GoalDetailDialog({
               <div className="space-y-2">
                 {goal.tasks?.length ? (
                   goal.tasks.map((task) => (
-                    <label
+                    <div
                       key={task.id}
-                      className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                      className="rounded-lg border p-3"
                     >
-                      <Checkbox
-                        checked={task.isCompleted}
-                        onCheckedChange={(checked) =>
-                          void toggleTask(task.id, Boolean(checked))
+                      <label className="flex cursor-pointer items-center gap-3">
+                        <Checkbox
+                          checked={task.isCompleted}
+                          onCheckedChange={(checked) =>
+                            void toggleTask(task.id, Boolean(checked))
+                          }
+                        />
+                        <span
+                          className={
+                            task.isCompleted
+                              ? "flex-1 text-sm text-muted-foreground line-through"
+                              : "flex-1 text-sm font-medium"
+                          }
+                        >
+                          {task.title}
+                        </span>
+                        {task.isCompleted ? (
+                          <CheckCircle2 className="size-4 text-emerald-500" />
+                        ) : (
+                          <Circle className="size-4 text-muted-foreground" />
+                        )}
+                      </label>
+                      <SubtaskChecklist
+                        taskId={task.id}
+                        subtasks={task.subtasks}
+                        onChange={(subtasks) =>
+                          updateSubtasks(task.id, subtasks)
                         }
                       />
-                      <span
-                        className={
-                          task.isCompleted
-                            ? "flex-1 text-sm text-muted-foreground line-through"
-                            : "flex-1 text-sm font-medium"
-                        }
-                      >
-                        {task.title}
-                      </span>
-                      {task.isCompleted ? (
-                        <CheckCircle2 className="size-4 text-emerald-500" />
-                      ) : (
-                        <Circle className="size-4 text-muted-foreground" />
-                      )}
-                    </label>
+                    </div>
                   ))
                 ) : (
                   <p className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">

@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useSearchParams } from "next/navigation";
 import {
   CalendarDays,
   CheckSquare2,
@@ -12,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { PriorityBadge } from "@/components/tasks/priority-badge";
+import { SubtaskChecklist } from "@/components/tasks/subtask-checklist";
 import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,16 +32,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, getApiError } from "@/lib/api";
-import { formatDate } from "@/lib/format";
-import type { Goal, Task } from "@/lib/types";
+import { formatDate, isOverdue, isThisWeek, isToday } from "@/lib/format";
+import type { Goal, Subtask, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type TaskTab = "all" | "standalone" | "linked";
+type TaskDateFilter = "all" | "today" | "week" | "overdue";
 
-export default function TasksPage() {
+function TasksContent() {
+  const searchParams = useSearchParams();
+  const categoryId = searchParams.get("categoryId");
+  const handledCreate = useRef(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [tab, setTab] = useState<TaskTab>("all");
+  const [dateFilter, setDateFilter] = useState<TaskDateFilter>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -54,20 +68,44 @@ export default function TasksPage() {
   }, []);
 
   useEffect(() => {
-    async function initializeFromUrl() {
-      await Promise.resolve();
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("create") === "true") setFormOpen(true);
+    if (searchParams.get("create") === "true" && !handledCreate.current) {
+      handledCreate.current = true;
+      queueMicrotask(() => setFormOpen(true));
     }
-    void initializeFromUrl();
     queueMicrotask(() => void loadData());
-  }, [loadData]);
+  }, [loadData, searchParams]);
 
   const filteredTasks = useMemo(() => {
-    if (tab === "standalone") return tasks.filter((task) => !task.goalId);
-    if (tab === "linked") return tasks.filter((task) => Boolean(task.goalId));
-    return tasks;
-  }, [tab, tasks]);
+    let filtered = tasks;
+    if (tab === "standalone") {
+      filtered = filtered.filter((task) => !task.goalId);
+    } else if (tab === "linked") {
+      filtered = filtered.filter((task) => Boolean(task.goalId));
+    }
+    if (categoryId) {
+      filtered = filtered.filter(
+        (task) => task.goal?.category?.id === categoryId,
+      );
+    }
+    if (dateFilter === "today") {
+      filtered = filtered.filter((task) => isToday(task.dueDate));
+    } else if (dateFilter === "week") {
+      filtered = filtered.filter((task) => isThisWeek(task.dueDate));
+    } else if (dateFilter === "overdue") {
+      filtered = filtered.filter(
+        (task) => !task.isCompleted && isOverdue(task.dueDate),
+      );
+    }
+    return filtered;
+  }, [categoryId, dateFilter, tab, tasks]);
+
+  function updateSubtasks(taskId: string, subtasks: Subtask[]) {
+    setTasks((current) =>
+      current.map((task) =>
+        task.id === taskId ? { ...task, subtasks } : task,
+      ),
+    );
+  }
 
   function createTask() {
     setEditingTask(null);
@@ -134,6 +172,24 @@ export default function TasksPage() {
         </TabsList>
       </Tabs>
 
+      <div className="flex flex-wrap gap-2">
+        {([
+          ["all", "All"],
+          ["today", "Today"],
+          ["week", "This Week"],
+          ["overdue", "Overdue"],
+        ] as const).map(([value, label]) => (
+          <Button
+            key={value}
+            size="sm"
+            variant={dateFilter === value ? "default" : "outline"}
+            onClick={() => setDateFilter(value)}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+
       <div className="overflow-hidden rounded-xl border bg-background">
         {isLoading ? (
           <div className="space-y-3 p-4">
@@ -178,6 +234,11 @@ export default function TasksPage() {
                       <CalendarDays className="size-3" /> {formatDate(task.dueDate)}
                     </span>
                   </div>
+                  <SubtaskChecklist
+                    taskId={task.id}
+                    subtasks={task.subtasks}
+                    onChange={(subtasks) => updateSubtasks(task.id, subtasks)}
+                  />
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger
@@ -227,5 +288,15 @@ export default function TasksPage() {
         onSaved={() => void loadData()}
       />
     </div>
+  );
+}
+
+export default function TasksPage() {
+  return (
+    <Suspense
+      fallback={<div className="h-72 animate-pulse rounded-xl bg-muted" />}
+    >
+      <TasksContent />
+    </Suspense>
   );
 }

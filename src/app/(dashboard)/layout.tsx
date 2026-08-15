@@ -6,16 +6,16 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   CheckSquare2,
   CircleGauge,
+  Flame,
   LogOut,
   Plus,
-  Search,
   Target,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { AppLogo } from "@/components/dashboard/app-logo";
+import { GlobalSearch } from "@/components/dashboard/global-search";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { getCategoryMetadata } from "@/lib/constants/categories";
 import type { Category } from "@/lib/types";
@@ -25,6 +25,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: CircleGauge },
   { name: "Goals", href: "/goals", icon: Target },
   { name: "Tasks", href: "/tasks", icon: CheckSquare2 },
+  { name: "Habits", href: "/habits", icon: Flame },
 ];
 
 export default function DashboardLayout({
@@ -109,10 +110,11 @@ export default function DashboardLayout({
               {categories.map((category) => {
                 const metadata = getCategoryMetadata(category.name);
                 const Icon = metadata.icon;
+                const categoryPage = pathname === "/tasks" ? "/tasks" : "/goals";
                 return (
                   <Link
                     key={category.id}
-                    href={`/goals?categoryId=${category.id}`}
+                    href={`${categoryPage}?categoryId=${category.id}`}
                     className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   >
                     <Icon className="size-4" />
@@ -168,13 +170,8 @@ export default function DashboardLayout({
         <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur">
           <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
             <AppLogo className="mr-auto md:hidden" />
-            <div className="relative hidden w-full max-w-md md:block">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                aria-label="Search"
-                className="bg-muted/50 pl-9"
-                placeholder="Search goals and tasks…"
-              />
+            <div className="hidden w-full md:block">
+              <GlobalSearch />
             </div>
             <div className="ml-auto flex items-center gap-2">
               <nav className="flex items-center md:hidden">
