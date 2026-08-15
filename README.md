@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Plann Frontend
 
-## Getting Started
+Next.js App Router frontend for the Plann personal planning MVP. It includes JWT authentication, a shared protected dashboard shell, goal management, and a unified task list.
 
-First, run the development server:
+## Local setup
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. Install dependencies:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+   ```bash
+   npm install
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+2. Copy `.env.example` to `.env.local`. The default API URL is `http://localhost:4000`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Start the frontend:
 
-## Learn More
+   ```bash
+   npm run dev
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+Open `http://localhost:3000`. Start the backend first so authentication and planning data are available.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Commands
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `npm run dev` — start the local development server
+- `npm run build` — create a production build
+- `npm run lint` — run ESLint
+- `npm run start` — serve the production build
 
-## Deploy on Vercel
+## Architecture notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Authentication state is centralized in `AuthProvider`; Axios attaches the stored JWT to API requests.
+- Sidebar, header, categories, quick actions, and the main container live only in `src/app/(dashboard)/layout.tsx`.
+- Category names, colors, badges, and Lucide icons are centralized in `src/lib/constants/categories.ts`.
+- Styling uses Tailwind utility classes. The only stylesheet is `src/app/globals.css`, which contains Tailwind and shadcn theme setup.
