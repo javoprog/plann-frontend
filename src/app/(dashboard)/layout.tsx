@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -8,12 +8,13 @@ import {
   CircleGauge,
   Flame,
   LogOut,
+  Search,
   Settings,
   Target,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { AppLogo } from "@/components/dashboard/app-logo";
-import { GlobalSearch } from "@/components/dashboard/global-search";
+import { CommandMenu } from "@/components/dashboard/command-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -42,6 +43,7 @@ export default function DashboardLayout({
   const { t } = useLanguage();
   const router = useRouter();
   const { user, isLoading, logout } = useAuth();
+  const [commandOpen, setCommandOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) router.replace("/login");
@@ -145,10 +147,30 @@ export default function DashboardLayout({
           <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
             <AppLogo className="mr-auto md:hidden" />
             <div className="hidden w-full md:block">
-              <GlobalSearch />
+              <Button
+                variant="outline"
+                className="relative w-full max-w-md justify-start bg-muted/50 text-muted-foreground"
+                onClick={() => setCommandOpen(true)}
+              >
+                <Search className="mr-2 size-4" />
+                <span className="truncate">
+                  {t("command.searchPlaceholder")}
+                </span>
+                <kbd className="pointer-events-none absolute right-2.5 top-2 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+                  <span className="text-xs">⌘</span>K
+                </kbd>
+              </Button>
             </div>
             <div className="ml-auto flex items-center gap-2">
               <nav className="flex items-center md:hidden">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setCommandOpen(true)}
+                  aria-label={t("command.searchPlaceholder")}
+                >
+                  <Search className="size-4" />
+                </Button>
                 {navigation.map((item) => (
                   <Link
                     key={item.href}
@@ -177,6 +199,7 @@ export default function DashboardLayout({
         </header>
         <main className="p-4 sm:p-6">{children}</main>
       </div>
+      <CommandMenu open={commandOpen} onOpenChange={setCommandOpen} />
     </div>
   );
 }

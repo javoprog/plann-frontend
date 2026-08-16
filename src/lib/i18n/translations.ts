@@ -154,6 +154,10 @@ export const en = {
     "Let AI break down this goal into actionable tasks and habits in seconds",
   "ai.insufficientData":
     "Not enough details in this goal. Please add a description or category so AI can generate a plan.",
+  "command.searchPlaceholder": "Search goals, tasks, habits or commands...",
+  "command.navigation": "Navigation",
+  "command.actions": "Actions",
+  "command.noResults": "No results found.",
   "search.placeholder": "Search goals, tasks, and habits...",
   "search.searching": "Searching...",
   "search.noResults": "No matching goals, tasks, or habits.",
@@ -315,6 +319,10 @@ export const ru: Record<TranslationKey, string> = {
     "ИИ разберет цель на пошаговые задачи и привычки за 3 секунды",
   "ai.insufficientData":
     "Недостаточно информации в цели. Пожалуйста, добавьте подробное описание или категорию, чтобы ИИ мог составить план.",
+  "command.searchPlaceholder": "Поиск целей, задач, привычек или команд...",
+  "command.navigation": "Навигация",
+  "command.actions": "Действия",
+  "command.noResults": "Ничего не найдено.",
   "search.placeholder": "Поиск целей, задач и привычек...",
   "search.searching": "Поиск...",
   "search.noResults": "Совпадений не найдено.",
@@ -476,6 +484,11 @@ export const uz: Record<TranslationKey, string> = {
     "AI maqsadingizni bosqichma-bosqich vazifalar va odatlarga bo'ladi",
   "ai.insufficientData":
     "Ma'lumot yetarli emas. AI reja tuzishi uchun tavsif yoki kategoriya qo'shing.",
+  "command.searchPlaceholder":
+    "Maqsadlar, vazifalar, odatlar yoki buyruqlarni qidirish...",
+  "command.navigation": "Navigatsiya",
+  "command.actions": "Harakatlar",
+  "command.noResults": "Hech narsa topilmadi.",
   "search.placeholder": "Maqsad, vazifa va odatlarni qidirish...",
   "search.searching": "Qidirilmoqda...",
   "search.noResults": "Mos natija topilmadi.",
