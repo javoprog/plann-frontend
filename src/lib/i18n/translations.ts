@@ -151,6 +151,7 @@ export const en = {
   "settings.telegramConnect": "Connect Telegram",
   "settings.telegramConnected": "Telegram Connected",
   "settings.telegramOpenBot": "Open Telegram Bot",
+  "settings.telegramOpening": "Opening Telegram Bot...",
   "settings.telegramNotifications": "Daily notifications",
   "settings.telegramNotificationsDescription":
     "Morning briefings and evening habit reminders.",
@@ -233,6 +234,7 @@ export const ru: Record<TranslationKey, string> = {
   "settings.telegramConnect": "Привязать Telegram",
   "settings.telegramConnected": "Telegram подключен",
   "settings.telegramOpenBot": "Открыть Telegram Бота",
+  "settings.telegramOpening": "Открываем Telegram Бота...",
   "settings.telegramNotifications": "Ежедневные уведомления",
   "settings.telegramNotificationsDescription":
     "Утренний план и вечерние напоминания о привычках.",
@@ -454,6 +456,7 @@ export const uz: Record<TranslationKey, string> = {
   "settings.telegramConnect": "Telegram-ni ulash",
   "settings.telegramConnected": "Telegram ulangan",
   "settings.telegramOpenBot": "Telegram Botni ochish",
+  "settings.telegramOpening": "Telegram Bot ochilmoqda...",
   "settings.telegramNotifications": "Kundalik bildirishnomalar",
   "settings.telegramNotificationsDescription":
     "Ertalabki reja va kechki odat eslatmalari.",

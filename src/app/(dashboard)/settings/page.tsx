@@ -143,7 +143,10 @@ export default function SettingsPage() {
         "/users/telegram-link-code",
       );
       setTelegramLink(data);
-      toast.success(t("toast.telegramLinkReady"));
+      if (data.botUrl) {
+        window.open(data.botUrl, "_blank", "noopener,noreferrer");
+      }
+      toast.success(t("settings.telegramOpening"));
     } catch (error) {
       toast.error(getApiError(error));
     } finally {
@@ -391,12 +394,12 @@ export default function SettingsPage() {
                       })}
                     </p>
                     <Button
-                      render={
-                        <a
-                          href={telegramLink.botUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                        />
+                      onClick={() =>
+                        window.open(
+                          telegramLink.botUrl,
+                          "_blank",
+                          "noopener,noreferrer",
+                        )
                       }
                     >
                       <ExternalLink className="size-4" />
