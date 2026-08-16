@@ -1,11 +1,21 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { Languages, Loader2, Palette, ShieldCheck, UserRound } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import {
+  ExternalLink,
+  Languages,
+  Link2Off,
+  Loader2,
+  Palette,
+  Send,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useLanguage } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -25,12 +35,32 @@ import { api, getApiError } from "@/lib/api";
 import type { Language, ThemePreference, User } from "@/lib/types";
 
 export default function SettingsPage() {
-  const { user, updateUser, changeTheme } = useAuth();
+  const { user, updateUser, refreshUser, changeTheme } = useAuth();
   const { language, t, changeLanguage } = useLanguage();
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [isSavingTheme, setIsSavingTheme] = useState(false);
   const [isSavingLanguage, setIsSavingLanguage] = useState(false);
+  const [isConnectingTelegram, setIsConnectingTelegram] = useState(false);
+  const [isUpdatingTelegram, setIsUpdatingTelegram] = useState(false);
+  const [telegramLink, setTelegramLink] = useState<{
+    code: string;
+    botUrl: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!telegramLink) return;
+
+    const refreshTelegramStatus = () => {
+      void refreshUser().catch(() => undefined);
+    };
+    window.addEventListener("focus", refreshTelegramStatus);
+    return () => window.removeEventListener("focus", refreshTelegramStatus);
+  }, [refreshUser, telegramLink]);
+
+  useEffect(() => {
+    if (user?.telegramChatId) setTelegramLink(null);
+  }, [user?.telegramChatId]);
 
   if (!user) return null;
 
@@ -102,6 +132,53 @@ export default function SettingsPage() {
       toast.error(getApiError(error));
     } finally {
       setIsSavingLanguage(false);
+    }
+  }
+
+  async function createTelegramLink() {
+    if (isConnectingTelegram) return;
+    setIsConnectingTelegram(true);
+    try {
+      const { data } = await api.post<{ code: string; botUrl: string }>(
+        "/users/telegram-link-code",
+      );
+      setTelegramLink(data);
+      toast.success(t("toast.telegramLinkReady"));
+    } catch (error) {
+      toast.error(getApiError(error));
+    } finally {
+      setIsConnectingTelegram(false);
+    }
+  }
+
+  async function toggleTelegramNotifications() {
+    if (!user || isUpdatingTelegram) return;
+    setIsUpdatingTelegram(true);
+    try {
+      const { data } = await api.patch<User>("/users/telegram-notifications", {
+        telegramNotifications: !user.telegramNotifications,
+      });
+      updateUser(data);
+      toast.success(t("toast.telegramNotificationsUpdated"));
+    } catch (error) {
+      toast.error(getApiError(error));
+    } finally {
+      setIsUpdatingTelegram(false);
+    }
+  }
+
+  async function unlinkTelegram() {
+    if (isUpdatingTelegram) return;
+    setIsUpdatingTelegram(true);
+    try {
+      const { data } = await api.delete<User>("/users/telegram");
+      updateUser(data);
+      setTelegramLink(null);
+      toast.success(t("toast.telegramUnlinked"));
+    } catch (error) {
+      toast.error(getApiError(error));
+    } finally {
+      setIsUpdatingTelegram(false);
     }
   }
 
@@ -216,9 +293,7 @@ export default function SettingsPage() {
             <Select
               value={language}
               disabled={isSavingLanguage}
-              onValueChange={(value) =>
-                void updateLanguage(value as Language)
-              }
+              onValueChange={(value) => void updateLanguage(value as Language)}
             >
               <SelectTrigger className="w-full">
                 <span>{language.toUpperCase()}</span>
@@ -234,6 +309,108 @@ export default function SettingsPage() {
 
         <Card className="xl:col-span-2">
           <CardHeader>
+            <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400">
+              <Send className="size-5" />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle>{t("settings.telegramTitle")}</CardTitle>
+              {user.telegramChatId && (
+                <Badge variant="secondary">
+                  🟢 {t("settings.telegramConnected")}
+                </Badge>
+              )}
+            </div>
+            <CardDescription>
+              {t("settings.telegramDescription")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {user.telegramChatId ? (
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center justify-between gap-4 rounded-lg border p-3 sm:min-w-80">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {t("settings.telegramNotifications")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("settings.telegramNotificationsDescription")}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={user.telegramNotifications}
+                    aria-label={t("settings.telegramNotifications")}
+                    disabled={isUpdatingTelegram}
+                    className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      user.telegramNotifications ? "bg-primary" : "bg-muted"
+                    }`}
+                    onClick={() => void toggleTelegramNotifications()}
+                  >
+                    <span
+                      className={`pointer-events-none block size-5 translate-y-0.5 rounded-full bg-background shadow-sm transition-transform ${
+                        user.telegramNotifications
+                          ? "translate-x-5"
+                          : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+                <Button
+                  variant="outline"
+                  disabled={isUpdatingTelegram}
+                  onClick={() => void unlinkTelegram()}
+                >
+                  {isUpdatingTelegram ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Link2Off className="size-4" />
+                  )}
+                  {t("settings.telegramUnlink")}
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-start gap-3">
+                {!telegramLink ? (
+                  <Button
+                    disabled={isConnectingTelegram}
+                    onClick={() => void createTelegramLink()}
+                  >
+                    {isConnectingTelegram ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Send className="size-4" />
+                    )}
+                    {t("settings.telegramConnect")}
+                  </Button>
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      {t("settings.telegramLinkExpires", {
+                        code: telegramLink.code,
+                      })}
+                    </p>
+                    <Button
+                      render={
+                        <a
+                          href={telegramLink.botUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        />
+                      }
+                    >
+                      <ExternalLink className="size-4" />
+                      {t("settings.telegramOpenBot")}
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="xl:col-span-2">
+          <CardHeader>
             <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <ShieldCheck className="size-5" />
             </div>
@@ -243,7 +420,10 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="grid gap-4 sm:grid-cols-2" onSubmit={updatePassword}>
+            <form
+              className="grid gap-4 sm:grid-cols-2"
+              onSubmit={updatePassword}
+            >
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="current-password">
                   {t("settings.currentPassword")}

@@ -1,8 +1,4 @@
-export type GoalStatus =
-  | "PLANNED"
-  | "IN_PROGRESS"
-  | "COMPLETED"
-  | "CANCELLED";
+export type GoalStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 
 export type Priority = "LOW" | "MEDIUM" | "HIGH";
 export type HabitFrequency = "DAILY" | "WEEKDAYS" | "WEEKENDS";
@@ -19,6 +15,8 @@ export interface User {
   level: number;
   globalStreak: number;
   xpToNextLevel: number;
+  telegramChatId: string | null;
+  telegramNotifications: boolean;
 }
 
 export interface Category {

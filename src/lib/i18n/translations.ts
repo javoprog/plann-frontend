@@ -44,6 +44,9 @@ export const en = {
   "toast.passwordUpdated": "Password updated",
   "toast.languageUpdated": "Language updated",
   "toast.themeUpdated": "Theme updated",
+  "toast.telegramLinkReady": "Telegram link is ready",
+  "toast.telegramNotificationsUpdated": "Telegram notifications updated",
+  "toast.telegramUnlinked": "Telegram disconnected",
   "common.loading": "Loading...",
   "common.noDescription": "No description added yet.",
   "common.noCategory": "No category",
@@ -142,6 +145,18 @@ export const en = {
   "settings.confirmPassword": "Confirm Password",
   "settings.saveProfile": "Save Profile",
   "settings.updatePassword": "Update Password",
+  "settings.telegramTitle": "Telegram Assistant",
+  "settings.telegramDescription":
+    "Get daily briefings and check off today's work directly in Telegram.",
+  "settings.telegramConnect": "Connect Telegram",
+  "settings.telegramConnected": "Telegram Connected",
+  "settings.telegramOpenBot": "Open Telegram Bot",
+  "settings.telegramNotifications": "Daily notifications",
+  "settings.telegramNotificationsDescription":
+    "Morning briefings and evening habit reminders.",
+  "settings.telegramUnlink": "Unlink Telegram",
+  "settings.telegramLinkExpires":
+    "Code {{code}} is valid for 15 minutes. Open the bot to finish linking.",
   "auth.welcome": "Welcome back",
   "auth.loginDescription":
     "Sign in to continue turning your plans into progress.",
@@ -209,13 +224,27 @@ export const en = {
 export type TranslationKey = keyof typeof en;
 
 export const ru: Record<TranslationKey, string> = {
+  "toast.telegramLinkReady": "Ссылка для Telegram готова",
+  "toast.telegramNotificationsUpdated": "Уведомления Telegram обновлены",
+  "toast.telegramUnlinked": "Telegram отключен",
+  "settings.telegramTitle": "Telegram-ассистент",
+  "settings.telegramDescription":
+    "Получайте ежедневный план и отмечайте выполненное прямо в Telegram.",
+  "settings.telegramConnect": "Привязать Telegram",
+  "settings.telegramConnected": "Telegram подключен",
+  "settings.telegramOpenBot": "Открыть Telegram Бота",
+  "settings.telegramNotifications": "Ежедневные уведомления",
+  "settings.telegramNotificationsDescription":
+    "Утренний план и вечерние напоминания о привычках.",
+  "settings.telegramUnlink": "Отвязать Telegram",
+  "settings.telegramLinkExpires":
+    "Код {{code}} действует 15 минут. Откройте бота, чтобы завершить привязку.",
   "actions.backToTasks": "Назад к задачам",
   "actions.backToHabits": "Назад к привычкам",
   "actions.markTaskComplete": "Отметить задачу выполненной",
   "actions.markTaskIncomplete": "Вернуть задачу в работу",
   "actions.confirmDeleteTask": "Вы уверены, что хотите удалить эту задачу?",
-  "actions.confirmDeleteHabit":
-    "Вы уверены, что хотите удалить эту привычку?",
+  "actions.confirmDeleteHabit": "Вы уверены, что хотите удалить эту привычку?",
   "tasks.subtaskProgress":
     "Подзадачи выполнены: {{completed}} из {{total}} ({{percent}}%)",
   "tasks.subtasksWorkspace": "Работа с подзадачами",
@@ -416,6 +445,21 @@ export const ru: Record<TranslationKey, string> = {
 };
 
 export const uz: Record<TranslationKey, string> = {
+  "toast.telegramLinkReady": "Telegram havolasi tayyor",
+  "toast.telegramNotificationsUpdated": "Telegram bildirishnomalari yangilandi",
+  "toast.telegramUnlinked": "Telegram uzildi",
+  "settings.telegramTitle": "Telegram yordamchisi",
+  "settings.telegramDescription":
+    "Kundalik rejani oling va bajarilgan ishlarni Telegram ichida belgilang.",
+  "settings.telegramConnect": "Telegram-ni ulash",
+  "settings.telegramConnected": "Telegram ulangan",
+  "settings.telegramOpenBot": "Telegram Botni ochish",
+  "settings.telegramNotifications": "Kundalik bildirishnomalar",
+  "settings.telegramNotificationsDescription":
+    "Ertalabki reja va kechki odat eslatmalari.",
+  "settings.telegramUnlink": "Telegram-ni uzish",
+  "settings.telegramLinkExpires":
+    "{{code}} kodi 15 daqiqa amal qiladi. Ulashni yakunlash uchun botni oching.",
   "actions.backToTasks": "Vazifalarga qaytish",
   "actions.backToHabits": "Odatlarga qaytish",
   "actions.markTaskComplete": "Vazifani bajarilgan deb belgilash",
