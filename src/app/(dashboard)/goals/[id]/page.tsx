@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
+import axios from "axios";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -167,7 +168,11 @@ function GoalPageContent() {
       celebrateGoalCompletion();
       await loadData();
     } catch (error) {
-      toast.error(getApiError(error));
+      if (axios.isAxiosError(error) && error.response?.status === 503) {
+        toast.error(t("ai.temporarilyUnavailable"));
+      } else {
+        toast.error(getApiError(error));
+      }
     } finally {
       setIsGeneratingAi(false);
     }

@@ -179,6 +179,8 @@ export const en = {
     "Let AI break down this goal into actionable tasks and habits in seconds",
   "ai.insufficientData":
     "Not enough details in this goal. Please add a description or category so AI can generate a plan.",
+  "ai.temporarilyUnavailable":
+    "AI service is temporarily unavailable. Please check your API key or try again later.",
   "command.searchPlaceholder": "Search goals, tasks, habits or commands...",
   "command.navigation": "Navigation",
   "command.actions": "Actions",
@@ -369,6 +371,8 @@ export const ru: Record<TranslationKey, string> = {
     "ИИ разберет цель на пошаговые задачи и привычки за 3 секунды",
   "ai.insufficientData":
     "Недостаточно информации в цели. Пожалуйста, добавьте подробное описание или категорию, чтобы ИИ мог составить план.",
+  "ai.temporarilyUnavailable":
+    "ИИ-сервис временно недоступен. Проверьте API-ключ или попробуйте позже.",
   "command.searchPlaceholder": "Поиск целей, задач, привычек или команд...",
   "command.navigation": "Навигация",
   "command.actions": "Действия",
@@ -559,6 +563,8 @@ export const uz: Record<TranslationKey, string> = {
     "AI maqsadingizni bosqichma-bosqich vazifalar va odatlarga bo'ladi",
   "ai.insufficientData":
     "Ma'lumot yetarli emas. AI reja tuzishi uchun tavsif yoki kategoriya qo'shing.",
+  "ai.temporarilyUnavailable":
+    "AI xizmati vaqtincha mavjud emas. API kalitingizni tekshiring yoki keyinroq urinib ko'ring.",
   "command.searchPlaceholder":
     "Maqsadlar, vazifalar, odatlar yoki buyruqlarni qidirish...",
   "command.navigation": "Navigatsiya",
