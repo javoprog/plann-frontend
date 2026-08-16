@@ -74,10 +74,10 @@ export function HabitFormDialog({
     try {
       if (habit) {
         await api.patch(`/habits/${habit.id}`, payload);
-        toast.success("Habit updated");
+        toast.success(t("toast.habitUpdated"));
       } else {
         await api.post("/habits", payload);
-        toast.success("Habit created");
+        toast.success(t("toast.habitCreated"));
       }
       onOpenChange(false);
       onSaved();
@@ -95,9 +95,7 @@ export function HabitFormDialog({
           <DialogTitle>
             {habit ? t("form.editHabitTitle") : t("form.createHabitTitle")}
           </DialogTitle>
-          <DialogDescription>
-            Choose a simple rhythm you can repeat consistently.
-          </DialogDescription>
+          <DialogDescription>{t("form.habitDescriptionText")}</DialogDescription>
         </DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">

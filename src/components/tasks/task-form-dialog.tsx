@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { DatePicker } from "@/components/shared/date-picker";
@@ -48,6 +48,8 @@ export function TaskFormDialog({
   onSaved,
 }: TaskFormDialogProps) {
   const { t } = useLanguage();
+  const [title, setTitle] = useState(task?.title ?? "");
+  const [description, setDescription] = useState(task?.description ?? "");
   const [goalId, setGoalId] = useState(
     task?.goalId ?? defaultGoalId ?? "standalone",
   );
@@ -61,12 +63,24 @@ export function TaskFormDialog({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (!open) return;
+    setTitle(task?.title ?? "");
+    setDescription(task?.description ?? "");
+    setGoalId(task?.goalId ?? defaultGoalId ?? "standalone");
+    setPriority(task?.priority ?? "MEDIUM");
+    setDueDate(
+      task?.dueDate
+        ? new Date(`${task.dueDate.slice(0, 10)}T00:00:00`)
+        : undefined,
+    );
+  }, [defaultGoalId, open, task]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
     const payload = {
-      title: String(formData.get("title")),
-      description: String(formData.get("description") ?? ""),
+      title,
+      description,
       priority,
       dueDate: dueDate
         ? `${getLocalDateKey(dueDate)}T00:00:00.000Z`
@@ -79,10 +93,10 @@ export function TaskFormDialog({
       if (task) {
         const { data } = await api.patch<Task>(`/tasks/${task.id}`, payload);
         onTaskChanged(data);
-        toast.success("Task updated");
+        toast.success(t("toast.taskUpdated"));
       } else {
         await api.post("/tasks", payload);
-        toast.success("Task created");
+        toast.success(t("toast.taskCreated"));
       }
       onOpenChange(false);
       onSaved();
@@ -100,9 +114,7 @@ export function TaskFormDialog({
           <DialogTitle>
             {task ? t("form.editTaskTitle") : t("form.createTaskTitle")}
           </DialogTitle>
-          <DialogDescription>
-            Keep it standalone or connect it to a goal for automatic progress.
-          </DialogDescription>
+          <DialogDescription>{t("form.taskDescriptionText")}</DialogDescription>
         </DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
@@ -110,7 +122,8 @@ export function TaskFormDialog({
             <Input
               id="task-title"
               name="title"
-              defaultValue={task?.title ?? ""}
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
               placeholder="What needs to be done?"
               minLength={2}
               maxLength={200}
@@ -122,7 +135,8 @@ export function TaskFormDialog({
             <Textarea
               id="task-description"
               name="description"
-              defaultValue={task?.description ?? ""}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
               placeholder="Add any details that make the next step easier."
               rows={3}
             />

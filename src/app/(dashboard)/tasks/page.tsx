@@ -105,6 +105,15 @@ function TasksContent() {
     return filtered;
   }, [categoryId, dateFilter, tab, tasks]);
 
+  const emptyStateTitle =
+    dateFilter === "overdue"
+      ? t("tasks.noOverdue")
+      : dateFilter === "today"
+        ? t("tasks.noToday")
+        : dateFilter === "week"
+          ? t("tasks.noThisWeek")
+          : t("tasks.noTasks");
+
   function updateTask(updatedTask: Task) {
     setTasks((current) =>
       current.map((task) =>
@@ -298,7 +307,7 @@ function TasksContent() {
             <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
               <CheckSquare2 className="size-6 text-muted-foreground" />
             </span>
-            <h2 className="font-semibold">{t("tasks.noTasks")}</h2>
+            <h2 className="font-semibold">{emptyStateTitle}</h2>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
               Add a task or switch tabs to see another part of your list.
             </p>

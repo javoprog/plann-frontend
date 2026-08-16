@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { DatePicker } from "@/components/shared/date-picker";
@@ -43,6 +43,8 @@ export function GoalFormDialog({
   onSaved,
 }: GoalFormDialogProps) {
   const { t } = useLanguage();
+  const [title, setTitle] = useState(goal?.title ?? "");
+  const [description, setDescription] = useState(goal?.description ?? "");
   const [categoryId, setCategoryId] = useState(goal?.categoryId ?? "none");
   const [status, setStatus] = useState<GoalStatus>(
     goal?.status ?? "IN_PROGRESS",
@@ -54,12 +56,24 @@ export function GoalFormDialog({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (!open) return;
+    setTitle(goal?.title ?? "");
+    setDescription(goal?.description ?? "");
+    setCategoryId(goal?.categoryId ?? "none");
+    setStatus(goal?.status ?? "IN_PROGRESS");
+    setDeadline(
+      goal?.deadline
+        ? new Date(`${goal.deadline.slice(0, 10)}T00:00:00`)
+        : undefined,
+    );
+  }, [goal, open]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
     const payload = {
-      title: String(formData.get("title")),
-      description: String(formData.get("description") ?? ""),
+      title,
+      description,
       deadline: deadline
         ? `${getLocalDateKey(deadline)}T00:00:00.000Z`
         : null,
@@ -71,10 +85,10 @@ export function GoalFormDialog({
     try {
       if (goal) {
         await api.patch(`/goals/${goal.id}`, payload);
-        toast.success("Goal updated");
+        toast.success(t("toast.goalUpdated"));
       } else {
         await api.post("/goals", payload);
-        toast.success("Goal created");
+        toast.success(t("toast.goalCreated"));
       }
       onOpenChange(false);
       onSaved();
@@ -92,9 +106,7 @@ export function GoalFormDialog({
           <DialogTitle>
             {goal ? t("form.editGoalTitle") : t("form.createGoalTitle")}
           </DialogTitle>
-          <DialogDescription>
-            Give this goal a clear outcome, category, and target date.
-          </DialogDescription>
+          <DialogDescription>{t("form.goalDescriptionText")}</DialogDescription>
         </DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
@@ -102,7 +114,8 @@ export function GoalFormDialog({
             <Input
               id="goal-title"
               name="title"
-              defaultValue={goal?.title ?? ""}
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
               placeholder="What do you want to achieve?"
               minLength={2}
               maxLength={160}
@@ -114,7 +127,8 @@ export function GoalFormDialog({
             <Textarea
               id="goal-description"
               name="description"
-              defaultValue={goal?.description ?? ""}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
               placeholder="Add context, a desired result, or a useful note."
               rows={4}
             />

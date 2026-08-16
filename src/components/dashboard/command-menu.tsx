@@ -74,30 +74,27 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   const formOptionsRequest = useRef<Promise<void> | null>(null);
   const trimmedQuery = query.trim();
 
-  const handleOpenChange = useCallback(
-    (nextOpen: boolean) => {
-      onOpenChange(nextOpen);
-      if (!nextOpen) {
-        setQuery("");
-        setResults(emptyResults);
-        setIsSearching(false);
-      }
-    },
-    [onOpenChange],
-  );
-
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key.toLowerCase() !== "k" || (!event.metaKey && !event.ctrlKey)) {
-        return;
+      if (
+        (event.key === "k" || event.key === "K" || event.code === "KeyK") &&
+        (event.metaKey || event.ctrlKey)
+      ) {
+        event.preventDefault();
+        onOpenChange(!open);
       }
-      event.preventDefault();
-      handleOpenChange(!open);
     }
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleOpenChange, open]);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onOpenChange, open]);
+
+  useEffect(() => {
+    if (open) return;
+    setQuery("");
+    setResults(emptyResults);
+    setIsSearching(false);
+  }, [open]);
 
   useEffect(() => {
     if (!open || trimmedQuery.length < 2) return;
@@ -143,7 +140,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   }, []);
 
   function navigate(href: string) {
-    handleOpenChange(false);
+    onOpenChange(false);
     router.push(href);
   }
 
@@ -158,7 +155,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   }
 
   async function openQuickAction(action: QuickAction) {
-    handleOpenChange(false);
+    onOpenChange(false);
     try {
       await loadFormOptions();
       if (action === "goal") setGoalDialogOpen(true);
@@ -179,7 +176,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
     <>
       <CommandDialog
         open={open}
-        onOpenChange={handleOpenChange}
+        onOpenChange={onOpenChange}
         title={t("command.searchPlaceholder")}
         description={t("command.searchPlaceholder")}
         className="sm:max-w-xl"

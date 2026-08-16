@@ -11,7 +11,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       <AuthProvider>
         <LanguageProvider>{children}</LanguageProvider>
       </AuthProvider>
-      <Toaster richColors position="top-right" />
+      <Toaster richColors position="top-center" />
     </ThemeProvider>
   );
 }
