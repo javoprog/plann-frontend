@@ -25,6 +25,19 @@ export function withSubtaskCompletion(
   };
 }
 
+export function withSubtaskTitle(
+  task: Task,
+  subtaskId: string,
+  title: string,
+): Task {
+  return {
+    ...task,
+    subtasks: (task.subtasks ?? []).map((subtask) =>
+      subtask.id === subtaskId ? { ...subtask, title } : subtask,
+    ),
+  };
+}
+
 export function withAddedSubtask(task: Task, subtask: Subtask): Task {
   return {
     ...task,

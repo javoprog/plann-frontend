@@ -8,30 +8,17 @@ import {
   useRef,
   useState,
 } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import {
-  CalendarDays,
-  CheckSquare2,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { CalendarDays, CheckSquare2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useLanguage } from "@/components/providers/language-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { PriorityBadge } from "@/components/tasks/priority-badge";
-import { SubtaskChecklist } from "@/components/tasks/subtask-checklist";
 import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, getApiError } from "@/lib/api";
 import { celebrateNewlyCompletedGoals } from "@/lib/confetti";
@@ -55,7 +42,6 @@ function TasksContent() {
   const [dateFilter, setDateFilter] = useState<TaskDateFilter>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -120,18 +106,9 @@ function TasksContent() {
         task.id === updatedTask.id ? updatedTask : task,
       ),
     );
-    setEditingTask((current) =>
-      current?.id === updatedTask.id ? updatedTask : current,
-    );
   }
 
   function createTask() {
-    setEditingTask(null);
-    setFormOpen(true);
-  }
-
-  function editTask(task: Task) {
-    setEditingTask(task);
     setFormOpen(true);
   }
 
@@ -163,19 +140,6 @@ function TasksContent() {
       await syncAfterMutation(previousGoals);
     } catch (error) {
       updateTask(task);
-      toast.error(getApiError(error));
-    }
-  }
-
-  async function deleteTask(task: Task) {
-    if (!window.confirm(`Delete “${task.title}”?`)) return;
-    try {
-      const previousGoals = goals;
-      await api.delete(`/tasks/${task.id}`);
-      setTasks((current) => current.filter((item) => item.id !== task.id));
-      await syncAfterMutation(previousGoals);
-      toast.success(t("toast.taskDeleted"));
-    } catch (error) {
       toast.error(getApiError(error));
     }
   }
@@ -246,7 +210,10 @@ function TasksContent() {
                   }
                   aria-label={`Mark ${task.title} complete`}
                 />
-                <div className="min-w-0 flex-1">
+                <Link
+                  href={`/tasks/${encodeURIComponent(task.id)}`}
+                  className="min-w-0 flex-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
                   <div className="flex flex-wrap items-center gap-2">
                     <p
                       className={cn(
@@ -272,33 +239,16 @@ function TasksContent() {
                         t("common.noDueDate"),
                       )}
                     </span>
+                    <span>
+                      {t("tasks.subtasks", {
+                        completed: (task.subtasks ?? []).filter(
+                          (subtask) => subtask.isCompleted,
+                        ).length,
+                        total: task.subtasks?.length ?? 0,
+                      })}
+                    </span>
                   </div>
-                  <SubtaskChecklist
-                    task={task}
-                    onChange={updateTask}
-                    onSettled={() => void syncAfterMutation(goals)}
-                  />
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button variant="ghost" size="icon-sm" aria-label="Task actions" />
-                    }
-                  >
-                    <MoreHorizontal className="size-4" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => editTask(task)}>
-                      <Pencil className="size-4" /> {t("actions.edit")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onClick={() => void deleteTask(task)}
-                    >
-                      <Trash2 className="size-4" /> {t("actions.delete")}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                </Link>
               </div>
             ))}
           </div>
@@ -319,11 +269,10 @@ function TasksContent() {
       </div>
 
       <TaskFormDialog
-        key={`${editingTask?.id ?? "new"}-${formOpen}`}
+        key={`new-${formOpen}`}
         open={formOpen}
         onOpenChange={setFormOpen}
         goals={goals}
-        task={editingTask}
         onTaskChanged={updateTask}
         onSaved={() => void syncAfterMutation(goals)}
       />

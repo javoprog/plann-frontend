@@ -1,14 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  Check,
-  Flame,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import Link from "next/link";
+import { Check, Flame, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useLanguage } from "@/components/providers/language-provider";
@@ -18,12 +12,6 @@ import { MonthlyDots } from "@/components/habits/monthly-dots";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { api, getApiError } from "@/lib/api";
 import { celebrateHabitCompletion } from "@/lib/confetti";
 import { getLocalDateKey } from "@/lib/format";
@@ -37,7 +25,6 @@ export default function HabitsPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
-  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const today = getLocalDateKey();
 
   const loadData = useCallback(async () => {
@@ -64,12 +51,6 @@ export default function HabitsPage() {
   }, [loadData]);
 
   function createHabit() {
-    setEditingHabit(null);
-    setFormOpen(true);
-  }
-
-  function editHabit(habit: Habit) {
-    setEditingHabit(habit);
     setFormOpen(true);
   }
 
@@ -112,20 +93,6 @@ export default function HabitsPage() {
     }
   }
 
-  async function deleteHabit(habit: Habit) {
-    if (!window.confirm(`Delete “${habit.title}”?`)) return;
-    try {
-      await api.delete(`/habits/${habit.id}`);
-      setHabits((current) => current.filter((item) => item.id !== habit.id));
-      void refreshUser().catch((error: unknown) =>
-        toast.error(getApiError(error)),
-      );
-      toast.success(t("toast.habitDeleted"));
-    } catch (error) {
-      toast.error(getApiError(error));
-    }
-  }
-
   return (
     <div className="flex flex-col space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -157,9 +124,15 @@ export default function HabitsPage() {
               (log) => log.date === today && log.completed,
             );
             return (
-              <Card key={habit.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-3">
+              <Card
+                key={habit.id}
+                className="transition-colors hover:border-primary/30"
+              >
+                <Link
+                  href={`/habits/${encodeURIComponent(habit.id)}`}
+                  className="block rounded-t-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <CardHeader>
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <CategoryBadge category={habit.category} />
@@ -172,34 +145,8 @@ export default function HabitsPage() {
                       </div>
                       <CardTitle className="text-lg">{habit.title}</CardTitle>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label="Habit actions"
-                          />
-                        }
-                      >
-                        <MoreHorizontal className="size-4" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => editHabit(habit)}>
-                          <Pencil className="size-4" /> {t("actions.edit")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => void deleteHabit(habit)}
-                        >
-                          <Trash2 className="size-4" /> {t("actions.delete")}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-5">
-                  <div className="flex items-center justify-between gap-3">
+                  </CardHeader>
+                  <CardContent className="space-y-4 pb-4">
                     <div>
                       <p className="text-sm font-medium">
                         {t(
@@ -214,18 +161,21 @@ export default function HabitsPage() {
                         {habit.goal?.title ?? t("habits.independent")}
                       </p>
                     </div>
-                    <Button
-                      size="sm"
-                      variant={completedToday ? "default" : "outline"}
-                      onClick={() => void toggleToday(habit)}
-                    >
-                      <Check className="size-4" />
-                      {completedToday
-                        ? t("actions.doneToday")
-                        : t("actions.markDone")}
-                    </Button>
-                  </div>
-                  <MonthlyDots habit={habit} />
+                    <MonthlyDots habit={habit} />
+                  </CardContent>
+                </Link>
+                <CardContent className="pt-0">
+                  <Button
+                    className="w-full"
+                    size="sm"
+                    variant={completedToday ? "default" : "outline"}
+                    onClick={() => void toggleToday(habit)}
+                  >
+                    <Check className="size-4" />
+                    {completedToday
+                      ? t("actions.doneToday")
+                      : t("actions.markDone")}
+                  </Button>
                 </CardContent>
               </Card>
             );
@@ -245,12 +195,11 @@ export default function HabitsPage() {
       )}
 
       <HabitFormDialog
-        key={`${editingHabit?.id ?? "new"}-${formOpen}`}
+        key={`new-${formOpen}`}
         open={formOpen}
         onOpenChange={setFormOpen}
         categories={categories}
         goals={goals}
-        habit={editingHabit}
         onSaved={() => void loadData()}
       />
     </div>

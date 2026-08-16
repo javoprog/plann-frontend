@@ -7,7 +7,6 @@ import { useParams } from "next/navigation";
 import {
   ArrowLeft,
   CalendarDays,
-  Check,
   Flame,
   Loader2,
   Plus,
@@ -15,28 +14,21 @@ import {
   Target,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { HabitFormDialog } from "@/components/habits/habit-form-dialog";
 import { MonthlyDots } from "@/components/habits/monthly-dots";
 import { useLanguage } from "@/components/providers/language-provider";
 import { PriorityBadge } from "@/components/tasks/priority-badge";
-import { SubtaskChecklist } from "@/components/tasks/subtask-checklist";
 import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { api, getApiError } from "@/lib/api";
-import {
-  celebrateGoalCompletion,
-  celebrateHabitCompletion,
-} from "@/lib/confetti";
-import { formatDate, getLocalDateKey } from "@/lib/format";
-import { withTaskCompletion } from "@/lib/task-completion";
-import type { Category, Goal, Habit, Task } from "@/lib/types";
+import { celebrateGoalCompletion } from "@/lib/confetti";
+import { formatDate } from "@/lib/format";
+import type { Category, Goal, Habit } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type AiPlanGenerationResponse =
@@ -49,7 +41,6 @@ type AiPlanGenerationResponse =
 
 function GoalPageContent() {
   const { id } = useParams<{ id: string }>();
-  const { refreshUser } = useAuth();
   const { language, t } = useLanguage();
   const [goal, setGoal] = useState<Goal | null>(null);
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -59,7 +50,6 @@ function GoalPageContent() {
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [habitFormOpen, setHabitFormOpen] = useState(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
-  const today = getLocalDateKey();
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -86,72 +76,6 @@ function GoalPageContent() {
   useEffect(() => {
     queueMicrotask(() => void loadData());
   }, [loadData]);
-
-  function updateTask(updatedTask: Task) {
-    setGoal((current) => {
-      if (!current?.tasks) return current;
-      const tasks = current.tasks.map((task) =>
-        task.id === updatedTask.id ? updatedTask : task,
-      );
-      const completedTasks = tasks.filter((task) => task.isCompleted).length;
-      return {
-        ...current,
-        tasks,
-        completedTasks,
-        totalTasks: tasks.length,
-        progress: tasks.length
-          ? Math.round((completedTasks / tasks.length) * 100)
-          : 0,
-      };
-    });
-  }
-
-  async function refreshGoal(previousProgress?: number) {
-    const { data } = await api.get<Goal>(`/goals/${id}`);
-    if (
-      previousProgress !== undefined &&
-      previousProgress < 100 &&
-      data.progress === 100
-    ) {
-      celebrateGoalCompletion();
-    }
-    setGoal(data);
-    void refreshUser().catch((error: unknown) =>
-      toast.error(getApiError(error)),
-    );
-  }
-
-  async function toggleTask(task: Task, isCompleted: boolean) {
-    const previousProgress = goal?.progress ?? 0;
-    updateTask(withTaskCompletion(task, isCompleted));
-    try {
-      const { data } = await api.patch<Task>(`/tasks/${task.id}`, {
-        isCompleted,
-      });
-      updateTask(data);
-      await refreshGoal(previousProgress);
-    } catch (error) {
-      updateTask(task);
-      toast.error(getApiError(error));
-    }
-  }
-
-  async function toggleHabit(habit: Habit) {
-    const wasCompleted = habit.logs.some(
-      (log) => log.date === today && log.completed,
-    );
-    try {
-      await api.post(`/habits/${habit.id}/toggle`, { date: today });
-      const { data } = await api.get<Habit[]>("/habits");
-      setHabits(data.filter((item) => item.goalId === id));
-      if (!wasCompleted) celebrateHabitCompletion();
-      void refreshUser().catch((error: unknown) =>
-        toast.error(getApiError(error)),
-      );
-    } catch (error) {
-      toast.error(getApiError(error));
-    }
-  }
 
   async function generateAiPlan() {
     if (isGeneratingAi) return;
@@ -293,49 +217,47 @@ function GoalPageContent() {
           <CardContent>
             {goal.tasks?.length ? (
               <div className="space-y-3">
-                {goal.tasks.map((task) => (
-                  <div key={task.id} className="rounded-lg border p-3">
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        className="mt-0.5"
-                        checked={task.isCompleted}
-                        onCheckedChange={(checked) =>
-                          void toggleTask(task, Boolean(checked))
-                        }
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p
-                            className={cn(
-                              "text-sm font-medium",
-                              task.isCompleted &&
-                                "text-muted-foreground line-through",
-                            )}
-                          >
-                            {task.title}
-                          </p>
-                          <PriorityBadge priority={task.priority} />
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
+                {goal.tasks.map((task) => {
+                  const subtasks = task.subtasks ?? [];
+                  const completedSubtasks = subtasks.filter(
+                    (subtask) => subtask.isCompleted,
+                  ).length;
+                  return (
+                    <Link
+                      key={task.id}
+                      href={`/tasks/${encodeURIComponent(task.id)}`}
+                      className="block rounded-lg border p-3 transition-colors hover:border-primary/30 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p
+                          className={cn(
+                            "min-w-0 flex-1 truncate text-sm font-medium",
+                            task.isCompleted &&
+                              "text-muted-foreground line-through",
+                          )}
+                        >
+                          {task.title}
+                        </p>
+                        <PriorityBadge priority={task.priority} />
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <span>
                           {formatDate(
                             task.dueDate,
                             language,
                             t("common.noDueDate"),
                           )}
-                        </p>
-                        <SubtaskChecklist
-                          task={task}
-                          onChange={updateTask}
-                          onSettled={(_updatedTask, previousTask) =>
-                            void refreshGoal(
-                              previousTask.isCompleted ? 100 : goal.progress,
-                            )
-                          }
-                        />
+                        </span>
+                        <span>
+                          {t("tasks.subtasks", {
+                            completed: completedSubtasks,
+                            total: subtasks.length,
+                          })}
+                        </span>
                       </div>
-                    </div>
-                  </div>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
             ) : (
               <p className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
@@ -355,49 +277,33 @@ function GoalPageContent() {
           <CardContent>
             {habits.length ? (
               <div className="space-y-3">
-                {habits.map((habit) => {
-                  const completedToday = habit.logs.some(
-                    (log) => log.date === today && log.completed,
-                  );
-                  return (
-                    <div
-                      key={habit.id}
-                      className="space-y-3 rounded-lg border p-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="flex size-9 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
-                          <Flame className="size-4" />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">
-                            {habit.title}
-                          </p>
-                          <div className="mt-1 flex flex-wrap gap-2">
-                            <CategoryBadge category={habit.category} />
-                            <Badge variant="secondary">
-                              {t("common.dayStreak", {
-                                count: habit.currentStreak,
-                              })}
-                            </Badge>
-                          </div>
+                {habits.map((habit) => (
+                  <Link
+                    key={habit.id}
+                    href={`/habits/${encodeURIComponent(habit.id)}`}
+                    className="block space-y-3 rounded-lg border p-3 transition-colors hover:border-primary/30 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="flex size-9 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
+                        <Flame className="size-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {habit.title}
+                        </p>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          <CategoryBadge category={habit.category} />
+                          <Badge variant="secondary">
+                            {t("common.dayStreak", {
+                              count: habit.currentStreak,
+                            })}
+                          </Badge>
                         </div>
-                        <Button
-                          size="icon-sm"
-                          variant={completedToday ? "default" : "outline"}
-                          onClick={() => void toggleHabit(habit)}
-                          aria-label={
-                            completedToday
-                              ? t("actions.doneToday")
-                              : t("actions.markDone")
-                          }
-                        >
-                          <Check className="size-4" />
-                        </Button>
                       </div>
-                      <MonthlyDots habit={habit} />
                     </div>
-                  );
-                })}
+                    <MonthlyDots habit={habit} />
+                  </Link>
+                ))}
               </div>
             ) : (
               <p className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
@@ -414,8 +320,8 @@ function GoalPageContent() {
         onOpenChange={setTaskFormOpen}
         goals={goals}
         defaultGoalId={goal.id}
-        onTaskChanged={updateTask}
-        onSaved={() => void refreshGoal(goal.progress)}
+        onTaskChanged={() => undefined}
+        onSaved={() => void loadData()}
       />
       <HabitFormDialog
         key={`goal-habit-${habitFormOpen}`}

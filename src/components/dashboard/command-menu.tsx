@@ -242,11 +242,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                       key={`${group.key}-${item.id}`}
                       value={`${item.title} ${group.key}`}
                       onSelect={() =>
-                        navigate(
-                          group.key === "goals"
-                            ? `/goals/${encodeURIComponent(item.id)}`
-                            : group.href,
-                        )
+                        navigate(`${group.href}/${encodeURIComponent(item.id)}`)
                       }
                     >
                       <group.icon className="size-4 text-muted-foreground" />
