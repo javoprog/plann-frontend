@@ -19,6 +19,12 @@ import { PriorityBadge } from "@/components/tasks/priority-badge";
 import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, getApiError } from "@/lib/api";
 import { celebrateNewlyCompletedGoals } from "@/lib/confetti";
@@ -29,6 +35,9 @@ import { cn } from "@/lib/utils";
 
 type TaskTab = "all" | "standalone" | "linked";
 type TaskDateFilter = "all" | "today" | "week" | "overdue";
+type TaskSort = "dueDate" | "priority";
+
+const PRIORITY_SORT_ORDER = { HIGH: 3, MEDIUM: 2, LOW: 1 } as const;
 
 function TasksContent() {
   const { refreshUser } = useAuth();
@@ -40,6 +49,7 @@ function TasksContent() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [tab, setTab] = useState<TaskTab>("all");
   const [dateFilter, setDateFilter] = useState<TaskDateFilter>("all");
+  const [sort, setSort] = useState<TaskSort>("dueDate");
   const [isLoading, setIsLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
 
@@ -88,8 +98,20 @@ function TasksContent() {
         (task) => !task.isCompleted && isOverdue(task.dueDate),
       );
     }
-    return filtered;
-  }, [categoryId, dateFilter, tab, tasks]);
+    return [...filtered].sort((first, second) => {
+      if (sort === "priority") {
+        return (
+          PRIORITY_SORT_ORDER[second.priority] -
+          PRIORITY_SORT_ORDER[first.priority]
+        );
+      }
+      if (!first.dueDate) return second.dueDate ? 1 : 0;
+      if (!second.dueDate) return -1;
+      return (
+        new Date(first.dueDate).getTime() - new Date(second.dueDate).getTime()
+      );
+    });
+  }, [categoryId, dateFilter, sort, tab, tasks]);
 
   const emptyStateTitle =
     dateFilter === "overdue"
@@ -102,9 +124,7 @@ function TasksContent() {
 
   function updateTask(updatedTask: Task) {
     setTasks((current) =>
-      current.map((task) =>
-        task.id === updatedTask.id ? updatedTask : task,
-      ),
+      current.map((task) => (task.id === updatedTask.id ? updatedTask : task)),
     );
   }
 
@@ -170,29 +190,52 @@ function TasksContent() {
         </TabsList>
       </Tabs>
 
-      <div className="flex flex-wrap gap-2">
-        {([
-          ["all", t("tasks.all")],
-          ["today", t("tasks.today")],
-          ["week", t("tasks.thisWeek")],
-          ["overdue", t("tasks.overdue")],
-        ] as const).map(([value, label]) => (
-          <Button
-            key={value}
-            size="sm"
-            variant={dateFilter === value ? "default" : "outline"}
-            onClick={() => setDateFilter(value)}
-          >
-            {label}
-          </Button>
-        ))}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ["all", t("tasks.all")],
+              ["today", t("tasks.today")],
+              ["week", t("tasks.thisWeek")],
+              ["overdue", t("tasks.overdue")],
+            ] as const
+          ).map(([value, label]) => (
+            <Button
+              key={value}
+              size="sm"
+              variant={dateFilter === value ? "default" : "outline"}
+              onClick={() => setDateFilter(value)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+        <Select
+          value={sort}
+          onValueChange={(value) => setSort(value as TaskSort)}
+        >
+          <SelectTrigger className="w-full sm:w-48">
+            <span>
+              {sort === "dueDate"
+                ? t("tasks.sortDueDate")
+                : t("tasks.sortPriority")}
+            </span>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="dueDate">{t("tasks.sortDueDate")}</SelectItem>
+            <SelectItem value="priority">{t("tasks.sortPriority")}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="overflow-hidden rounded-xl border bg-background">
         {isLoading ? (
           <div className="space-y-3 p-4">
             {[0, 1, 2, 3].map((item) => (
-              <div key={item} className="h-16 animate-pulse rounded-lg bg-muted" />
+              <div
+                key={item}
+                className="h-16 animate-pulse rounded-lg bg-muted"
+              />
             ))}
           </div>
         ) : filteredTasks.length ? (

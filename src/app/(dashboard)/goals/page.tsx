@@ -1,14 +1,15 @@
 "use client";
 
-import {
-  Suspense,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CalendarDays, MoreHorizontal, Pencil, Plus, Target, Trash2 } from "lucide-react";
+import {
+  CalendarDays,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Target,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
@@ -24,17 +25,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
 import { api, getApiError } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import type { Category, Goal, GoalStatus } from "@/lib/types";
 
-type StatusFilter = GoalStatus | "all";
+type StatusFilter = Extract<GoalStatus, "IN_PROGRESS" | "COMPLETED"> | "all";
+
+const GOAL_CATEGORY_FILTERS = [
+  "Work",
+  "Education",
+  "Health",
+  "Travel",
+  "Personal",
+] as const;
 
 function GoalsContent() {
   const { refreshUser } = useAuth();
@@ -49,6 +52,9 @@ function GoalsContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const categoryFilters = GOAL_CATEGORY_FILTERS.map((name) =>
+    categories.find((category) => category.name === name),
+  ).filter((category): category is Category => Boolean(category));
 
   const loadGoals = useCallback(async () => {
     setIsLoading(true);
@@ -132,58 +138,59 @@ function GoalsContent() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-xl border bg-background p-3 sm:flex-row">
-        <Select
-          value={categoryId}
-          onValueChange={(value) => changeCategory(String(value))}
-        >
-          <SelectTrigger className="w-full sm:w-52">
-            <span className="truncate">
-              {categoryId === "all"
-                ? t("goals.allCategories")
-                : categories.find((category) => category.id === categoryId)?.name ??
-                  t("goals.allCategories")}
-            </span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("goals.allCategories")}</SelectItem>
-            {categories.map((category) => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={status} onValueChange={(value) => setStatus(value as StatusFilter)}>
-          <SelectTrigger className="w-full sm:w-52">
-            <span className="truncate">
-              {status === "all"
-                ? t("goals.allStatuses")
-                : t(
-                    status === "PLANNED"
-                      ? "status.planned"
-                      : status === "IN_PROGRESS"
-                        ? "status.inProgress"
-                        : status === "COMPLETED"
-                          ? "status.completed"
-                          : "status.cancelled",
-                  )}
-            </span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("goals.allStatuses")}</SelectItem>
-            <SelectItem value="PLANNED">{t("status.planned")}</SelectItem>
-            <SelectItem value="IN_PROGRESS">{t("status.inProgress")}</SelectItem>
-            <SelectItem value="COMPLETED">{t("status.completed")}</SelectItem>
-            <SelectItem value="CANCELLED">{t("status.cancelled")}</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="space-y-3 rounded-xl border bg-background p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-xs font-medium text-muted-foreground">
+            {t("form.category")}
+          </span>
+          <Button
+            size="sm"
+            variant={categoryId === "all" ? "default" : "outline"}
+            onClick={() => changeCategory("all")}
+          >
+            {t("tasks.all")}
+          </Button>
+          {categoryFilters.map((category) => (
+            <Button
+              key={category.id}
+              size="sm"
+              variant={categoryId === category.id ? "default" : "outline"}
+              onClick={() => changeCategory(category.id)}
+            >
+              {category.name}
+            </Button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-xs font-medium text-muted-foreground">
+            {t("form.status")}
+          </span>
+          {(
+            [
+              ["all", t("tasks.all")],
+              ["IN_PROGRESS", t("status.inProgress")],
+              ["COMPLETED", t("status.completed")],
+            ] as const
+          ).map(([value, label]) => (
+            <Button
+              key={value}
+              size="sm"
+              variant={status === value ? "default" : "outline"}
+              onClick={() => setStatus(value)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[0, 1, 2].map((item) => (
-            <div key={item} className="h-48 animate-pulse rounded-xl bg-muted" />
+            <div
+              key={item}
+              className="h-48 animate-pulse rounded-xl bg-muted"
+            />
           ))}
         </div>
       ) : goals.length ? (
@@ -212,7 +219,11 @@ function GoalsContent() {
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         render={
-                          <Button variant="ghost" size="icon-sm" aria-label="Goal actions" />
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Goal actions"
+                          />
                         }
                       >
                         <MoreHorizontal className="size-4" />
@@ -221,7 +232,10 @@ function GoalsContent() {
                         <DropdownMenuItem onClick={() => editGoal(goal)}>
                           <Pencil className="size-4" /> {t("actions.edit")}
                         </DropdownMenuItem>
-                        <DropdownMenuItem variant="destructive" onClick={() => void deleteGoal(goal)}>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => void deleteGoal(goal)}
+                        >
                           <Trash2 className="size-4" /> {t("actions.delete")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -244,11 +258,7 @@ function GoalsContent() {
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <CalendarDays className="size-3.5" />
-                  {formatDate(
-                    goal.deadline,
-                    language,
-                    t("common.noDueDate"),
-                  )}
+                  {formatDate(goal.deadline, language, t("common.noDueDate"))}
                 </div>
               </CardContent>
             </Card>
@@ -261,7 +271,8 @@ function GoalsContent() {
           </span>
           <h2 className="font-semibold">{t("goals.noGoals")}</h2>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            Create a goal or change your filters to see what you are working toward.
+            Create a goal or change your filters to see what you are working
+            toward.
           </p>
           <Button className="mt-4" variant="outline" onClick={createGoal}>
             <Plus className="size-4" /> {t("actions.createGoal")}

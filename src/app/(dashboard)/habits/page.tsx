@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Check, Flame, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -12,6 +12,12 @@ import { MonthlyDots } from "@/components/habits/monthly-dots";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { api, getApiError } from "@/lib/api";
 import { celebrateHabitCompletion } from "@/lib/confetti";
 import { getLocalDateKey } from "@/lib/format";
@@ -25,7 +31,17 @@ export default function HabitsPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [sort, setSort] = useState<"streak" | "name">("streak");
   const today = getLocalDateKey();
+  const sortedHabits = useMemo(
+    () =>
+      [...habits].sort((first, second) =>
+        sort === "streak"
+          ? second.currentStreak - first.currentStreak
+          : first.title.localeCompare(second.title),
+      ),
+    [habits, sort],
+  );
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -111,15 +127,37 @@ export default function HabitsPage() {
         </div>
       </div>
 
+      <div className="flex justify-end">
+        <Select
+          value={sort}
+          onValueChange={(value) => setSort(value as "streak" | "name")}
+        >
+          <SelectTrigger className="w-full sm:w-48">
+            <span>
+              {sort === "streak"
+                ? t("habits.sortStreak")
+                : t("habits.sortName")}
+            </span>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="streak">{t("habits.sortStreak")}</SelectItem>
+            <SelectItem value="name">{t("habits.sortName")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[0, 1, 2].map((item) => (
-            <div key={item} className="h-52 animate-pulse rounded-xl bg-muted" />
+            <div
+              key={item}
+              className="h-52 animate-pulse rounded-xl bg-muted"
+            />
           ))}
         </div>
       ) : habits.length ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {habits.map((habit) => {
+          {sortedHabits.map((habit) => {
             const completedToday = habit.logs.some(
               (log) => log.date === today && log.completed,
             );

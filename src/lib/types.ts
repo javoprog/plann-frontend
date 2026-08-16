@@ -2,6 +2,7 @@ export type GoalStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 
 export type Priority = "LOW" | "MEDIUM" | "HIGH";
 export type HabitFrequency = "DAILY" | "WEEKDAYS" | "WEEKENDS";
+export type RecurrenceInterval = "DAILY" | "WEEKLY" | "MONTHLY";
 export type ThemePreference = "system" | "light" | "dark";
 export type Language = "en" | "ru" | "uz";
 
@@ -32,6 +33,8 @@ export interface Task {
   title: string;
   description?: string | null;
   isCompleted: boolean;
+  isRecurring: boolean;
+  recurrenceInterval?: RecurrenceInterval | null;
   priority: Priority;
   dueDate?: string | null;
   goalId?: string | null;

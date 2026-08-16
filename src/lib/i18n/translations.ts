@@ -107,6 +107,8 @@ export const en = {
   "tasks.noThisWeek": "No tasks due this week",
   "tasks.subtasks": "{{completed}}/{{total}} subtasks",
   "tasks.addSubtask": "Add a subtask",
+  "tasks.sortDueDate": "Sort by Due Date",
+  "tasks.sortPriority": "Sort by Priority",
   "tasks.subtaskProgress":
     "Subtasks Completed: {{completed}} of {{total}} ({{percent}}%)",
   "tasks.subtasksWorkspace": "Subtasks Workspace",
@@ -121,6 +123,8 @@ export const en = {
   "habits.totalCheckIns": "Total Check-ins",
   "habits.activityLast30Days": "Last 30 Days",
   "habits.noCheckIns": "No check-ins yet",
+  "habits.sortStreak": "Sort by Streak",
+  "habits.sortName": "Sort by Name",
   "settings.title": "Settings",
   "settings.description": "Manage your account settings and preferences",
   "settings.profile": "Profile Information",
@@ -194,6 +198,8 @@ export const en = {
   "form.chooseDate": "Choose a date",
   "form.chooseGoal": "Choose a goal",
   "form.noRelatedGoal": "No related goal",
+  "form.isRecurring": "Recurring task",
+  "form.recurrenceInterval": "Repeat interval",
   "status.planned": "Planned",
   "status.inProgress": "In progress",
   "status.completed": "Completed",
@@ -204,6 +210,9 @@ export const en = {
   "frequency.daily": "Every day",
   "frequency.weekdays": "Weekdays",
   "frequency.weekends": "Weekends",
+  "recurrence.daily": "Daily",
+  "recurrence.weekly": "Weekly",
+  "recurrence.monthly": "Monthly",
   generatePlan: "✨ Generate Plan",
   "ai.generating": "AI is creating plan...",
   "ai.emptyTitle": "Start with an AI Plan",
@@ -225,6 +234,15 @@ export const en = {
 export type TranslationKey = keyof typeof en;
 
 export const ru: Record<TranslationKey, string> = {
+  "tasks.sortDueDate": "Сначала по сроку",
+  "tasks.sortPriority": "Сначала по приоритету",
+  "habits.sortStreak": "Сортировать по серии",
+  "habits.sortName": "Сортировать по названию",
+  "form.isRecurring": "Повторяющаяся задача",
+  "form.recurrenceInterval": "Интервал повторения",
+  "recurrence.daily": "Ежедневно",
+  "recurrence.weekly": "Еженедельно",
+  "recurrence.monthly": "Ежемесячно",
   "toast.telegramLinkReady": "Ссылка для Telegram готова",
   "toast.telegramNotificationsUpdated": "Уведомления Telegram обновлены",
   "toast.telegramUnlinked": "Telegram отключен",
@@ -447,6 +465,15 @@ export const ru: Record<TranslationKey, string> = {
 };
 
 export const uz: Record<TranslationKey, string> = {
+  "tasks.sortDueDate": "Muddat bo'yicha saralash",
+  "tasks.sortPriority": "Muhimlik bo'yicha saralash",
+  "habits.sortStreak": "Seriya bo'yicha saralash",
+  "habits.sortName": "Nomi bo'yicha saralash",
+  "form.isRecurring": "Takrorlanuvchi vazifa",
+  "form.recurrenceInterval": "Takrorlanish oralig'i",
+  "recurrence.daily": "Har kuni",
+  "recurrence.weekly": "Har hafta",
+  "recurrence.monthly": "Har oy",
   "toast.telegramLinkReady": "Telegram havolasi tayyor",
   "toast.telegramNotificationsUpdated": "Telegram bildirishnomalari yangilandi",
   "toast.telegramUnlinked": "Telegram uzildi",

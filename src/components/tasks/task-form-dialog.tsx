@@ -7,6 +7,7 @@ import { DatePicker } from "@/components/shared/date-picker";
 import { useLanguage } from "@/components/providers/language-provider";
 import { SubtaskChecklist } from "@/components/tasks/subtask-checklist";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +27,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { api, getApiError } from "@/lib/api";
 import { getLocalDateKey } from "@/lib/format";
-import type { Goal, Priority, Task } from "@/lib/types";
+import type { Goal, Priority, RecurrenceInterval, Task } from "@/lib/types";
 
 interface TaskFormDialogProps {
   open: boolean;
@@ -56,6 +57,9 @@ export function TaskFormDialog({
   const [priority, setPriority] = useState<Priority>(
     task?.priority ?? "MEDIUM",
   );
+  const [isRecurring, setIsRecurring] = useState(task?.isRecurring ?? false);
+  const [recurrenceInterval, setRecurrenceInterval] =
+    useState<RecurrenceInterval>(task?.recurrenceInterval ?? "DAILY");
   const [dueDate, setDueDate] = useState<Date | undefined>(
     task?.dueDate
       ? new Date(`${task.dueDate.slice(0, 10)}T00:00:00`)
@@ -69,6 +73,8 @@ export function TaskFormDialog({
     setDescription(task?.description ?? "");
     setGoalId(task?.goalId ?? defaultGoalId ?? "standalone");
     setPriority(task?.priority ?? "MEDIUM");
+    setIsRecurring(task?.isRecurring ?? false);
+    setRecurrenceInterval(task?.recurrenceInterval ?? "DAILY");
     setDueDate(
       task?.dueDate
         ? new Date(`${task.dueDate.slice(0, 10)}T00:00:00`)
@@ -82,9 +88,9 @@ export function TaskFormDialog({
       title,
       description,
       priority,
-      dueDate: dueDate
-        ? `${getLocalDateKey(dueDate)}T00:00:00.000Z`
-        : null,
+      isRecurring,
+      recurrenceInterval: isRecurring ? recurrenceInterval : null,
+      dueDate: dueDate ? `${getLocalDateKey(dueDate)}T00:00:00.000Z` : null,
       goalId: goalId === "standalone" ? null : goalId,
     };
 
@@ -130,6 +136,54 @@ export function TaskFormDialog({
               required
             />
           </div>
+          <div className="space-y-3 rounded-lg border p-3">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="task-recurring"
+                checked={isRecurring}
+                onCheckedChange={(checked) => {
+                  const nextIsRecurring = Boolean(checked);
+                  setIsRecurring(nextIsRecurring);
+                  if (nextIsRecurring && !dueDate) setDueDate(new Date());
+                }}
+              />
+              <Label htmlFor="task-recurring">{t("form.isRecurring")}</Label>
+            </div>
+            {isRecurring && (
+              <div className="space-y-2">
+                <Label>{t("form.recurrenceInterval")}</Label>
+                <Select
+                  value={recurrenceInterval}
+                  onValueChange={(value) =>
+                    setRecurrenceInterval(value as RecurrenceInterval)
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <span>
+                      {t(
+                        recurrenceInterval === "DAILY"
+                          ? "recurrence.daily"
+                          : recurrenceInterval === "WEEKLY"
+                            ? "recurrence.weekly"
+                            : "recurrence.monthly",
+                      )}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DAILY">
+                      {t("recurrence.daily")}
+                    </SelectItem>
+                    <SelectItem value="WEEKLY">
+                      {t("recurrence.weekly")}
+                    </SelectItem>
+                    <SelectItem value="MONTHLY">
+                      {t("recurrence.monthly")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
           <div className="space-y-2">
             <Label htmlFor="task-description">{t("form.description")}</Label>
             <Textarea
@@ -144,17 +198,22 @@ export function TaskFormDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>{t("form.relatedGoal")}</Label>
-              <Select value={goalId} onValueChange={(value) => setGoalId(String(value))}>
+              <Select
+                value={goalId}
+                onValueChange={(value) => setGoalId(String(value))}
+              >
                 <SelectTrigger className="w-full">
                   <span className="truncate">
                     {goalId === "standalone"
                       ? t("common.standalone")
-                      : goals.find((goal) => goal.id === goalId)?.title ??
-                        t("form.chooseGoal")}
+                      : (goals.find((goal) => goal.id === goalId)?.title ??
+                        t("form.chooseGoal"))}
                   </span>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="standalone">{t("common.standalone")}</SelectItem>
+                  <SelectItem value="standalone">
+                    {t("common.standalone")}
+                  </SelectItem>
                   {goals.map((goal) => (
                     <SelectItem key={goal.id} value={goal.id}>
                       {goal.title}
