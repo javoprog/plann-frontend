@@ -120,7 +120,7 @@ export default function HabitsPage() {
       void refreshUser().catch((error: unknown) =>
         toast.error(getApiError(error)),
       );
-      toast.success("Habit deleted");
+      toast.success(t("toast.habitDeleted"));
     } catch (error) {
       toast.error(getApiError(error));
     }

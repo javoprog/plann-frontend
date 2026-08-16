@@ -40,14 +40,14 @@ export default function RegisterPage() {
     };
 
     if (input.password !== input.confirmPassword) {
-      toast.error("Passwords do not match");
+      toast.error(t("toast.passwordsDoNotMatch"));
       return;
     }
 
     setIsSubmitting(true);
     try {
       await register(input);
-      toast.success("Your account is ready");
+      toast.success(t("toast.accountReady"));
       router.replace("/dashboard");
     } catch (error) {
       toast.error(getApiError(error));

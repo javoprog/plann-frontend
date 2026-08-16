@@ -174,7 +174,7 @@ function TasksContent() {
       await api.delete(`/tasks/${task.id}`);
       setTasks((current) => current.filter((item) => item.id !== task.id));
       await syncAfterMutation(previousGoals);
-      toast.success("Task deleted");
+      toast.success(t("toast.taskDeleted"));
     } catch (error) {
       toast.error(getApiError(error));
     }

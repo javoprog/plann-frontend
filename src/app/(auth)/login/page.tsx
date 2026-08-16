@@ -35,7 +35,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       await login(String(formData.get("email")), String(formData.get("password")));
-      toast.success("Welcome back");
+      toast.success(t("toast.welcomeBack"));
       router.replace("/dashboard");
     } catch (error) {
       toast.error(getApiError(error));

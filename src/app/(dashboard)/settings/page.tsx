@@ -24,12 +24,6 @@ import {
 import { api, getApiError } from "@/lib/api";
 import type { Language, ThemePreference, User } from "@/lib/types";
 
-const themeLabels: Record<ThemePreference, string> = {
-  system: "System",
-  light: "Light",
-  dark: "Dark",
-};
-
 export default function SettingsPage() {
   const { user, updateUser, changeTheme } = useAuth();
   const { language, t, changeLanguage } = useLanguage();
@@ -50,7 +44,7 @@ export default function SettingsPage() {
         email: String(formData.get("email") ?? ""),
       });
       updateUser(data);
-      toast.success("Profile updated");
+      toast.success(t("toast.profileUpdated"));
     } catch (error) {
       toast.error(getApiError(error));
     } finally {
@@ -65,7 +59,7 @@ export default function SettingsPage() {
     const newPassword = String(formData.get("newPassword") ?? "");
     const confirmPassword = String(formData.get("confirmPassword") ?? "");
     if (newPassword !== confirmPassword) {
-      toast.error("New passwords do not match");
+      toast.error(t("toast.passwordsDoNotMatch"));
       return;
     }
 
@@ -77,7 +71,7 @@ export default function SettingsPage() {
         confirmPassword,
       });
       form.reset();
-      toast.success("Password updated");
+      toast.success(t("toast.passwordUpdated"));
     } catch (error) {
       toast.error(getApiError(error));
     } finally {
@@ -90,7 +84,7 @@ export default function SettingsPage() {
     setIsSavingTheme(true);
     try {
       await changeTheme(theme);
-      toast.success(`Theme set to ${themeLabels[theme].toLowerCase()}`);
+      toast.success(t("toast.themeUpdated"));
     } catch (error) {
       toast.error(getApiError(error));
     } finally {
@@ -103,7 +97,7 @@ export default function SettingsPage() {
     setIsSavingLanguage(true);
     try {
       await changeLanguage(language);
-      toast.success("Language updated");
+      toast.success(t("toast.languageUpdated"));
     } catch (error) {
       toast.error(getApiError(error));
     } finally {

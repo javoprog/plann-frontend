@@ -107,7 +107,7 @@ function GoalsContent() {
       void refreshUser().catch((error: unknown) =>
         toast.error(getApiError(error)),
       );
-      toast.success("Goal deleted");
+      toast.success(t("toast.goalDeleted"));
       void loadGoals();
     } catch (error) {
       toast.error(getApiError(error));
