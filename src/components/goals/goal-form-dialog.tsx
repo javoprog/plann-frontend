@@ -58,6 +58,20 @@ export function GoalFormDialog({
       : undefined,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const selectedCategoryLabel =
+    categoryId === "none"
+      ? t("common.noCategory")
+      : getCategoryLabel(
+          categories.find((category) => category.id === categoryId)?.name ??
+            categoryId,
+          t,
+        );
+  const statusLabels: Record<GoalStatus, string> = {
+    PLANNED: t("status.planned"),
+    IN_PROGRESS: t("status.inProgress"),
+    COMPLETED: t("status.completed"),
+    CANCELLED: t("status.cancelled"),
+  };
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -133,9 +147,9 @@ export function GoalFormDialog({
                 onValueChange={(value) => setCategoryId(String(value))}
               >
                 <SelectTrigger id="goal-category" className="w-full">
-                  <SelectValue />
+                  <SelectValue>{selectedCategoryLabel}</SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent align="start" alignItemWithTrigger={false}>
                   <SelectItem value="none">{t("common.noCategory")}</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
@@ -152,9 +166,9 @@ export function GoalFormDialog({
                 onValueChange={(value) => setStatus(value as GoalStatus)}
               >
                 <SelectTrigger id="goal-status" className="w-full">
-                  <SelectValue />
+                  <SelectValue>{statusLabels[status]}</SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent align="start" alignItemWithTrigger={false}>
                   <SelectItem value="PLANNED">{t("status.planned")}</SelectItem>
                   <SelectItem value="IN_PROGRESS">{t("status.inProgress")}</SelectItem>
                   <SelectItem value="COMPLETED">{t("status.completed")}</SelectItem>

@@ -61,6 +61,23 @@ export function HabitFormDialog({
     habit?.goalId ?? defaultGoalId ?? "none",
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const frequencyLabels: Record<HabitFrequency, string> = {
+    DAILY: t("frequency.daily"),
+    WEEKDAYS: t("frequency.weekdays"),
+    WEEKENDS: t("frequency.weekends"),
+  };
+  const selectedCategoryLabel =
+    categoryId === "none"
+      ? t("common.noCategory")
+      : getCategoryLabel(
+          categories.find((category) => category.id === categoryId)?.name ??
+            categoryId,
+          t,
+        );
+  const selectedGoalLabel =
+    goalId === "none"
+      ? t("form.noRelatedGoal")
+      : (goals.find((goal) => goal.id === goalId)?.title ?? goalId);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -135,9 +152,9 @@ export function HabitFormDialog({
                 }
               >
                 <SelectTrigger id="habit-frequency" className="w-full">
-                  <SelectValue />
+                  <SelectValue>{frequencyLabels[frequency]}</SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent align="start" alignItemWithTrigger={false}>
                   <SelectItem value="DAILY">{t("frequency.daily")}</SelectItem>
                   <SelectItem value="WEEKDAYS">{t("frequency.weekdays")}</SelectItem>
                   <SelectItem value="WEEKENDS">{t("frequency.weekends")}</SelectItem>
@@ -151,9 +168,9 @@ export function HabitFormDialog({
                 onValueChange={(value) => setCategoryId(String(value))}
               >
                 <SelectTrigger id="habit-category" className="w-full">
-                  <SelectValue />
+                  <SelectValue>{selectedCategoryLabel}</SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent align="start" alignItemWithTrigger={false}>
                   <SelectItem value="none">{t("common.noCategory")}</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
@@ -171,9 +188,9 @@ export function HabitFormDialog({
               onValueChange={(value) => setGoalId(String(value))}
             >
               <SelectTrigger id="habit-goal" className="w-full">
-                <SelectValue />
+                <SelectValue>{selectedGoalLabel}</SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent align="start" alignItemWithTrigger={false}>
                 <SelectItem value="none">{t("form.noRelatedGoal")}</SelectItem>
                 {goals.map((goal) => (
                   <SelectItem key={goal.id} value={goal.id}>

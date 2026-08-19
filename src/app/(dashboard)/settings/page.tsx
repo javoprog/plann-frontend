@@ -71,6 +71,16 @@ export default function SettingsPage() {
   if (!user) return null;
 
   const activeTelegramLink = user.telegramChatId ? null : telegramLink;
+  const themeLabels: Record<ThemePreference, string> = {
+    system: t("settings.system"),
+    light: t("settings.light"),
+    dark: t("settings.dark"),
+  };
+  const languageLabels: Record<Language, string> = {
+    en: "English (EN)",
+    ru: "Русский (RU)",
+    uz: "O‘zbekcha (UZ)",
+  };
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -278,9 +288,9 @@ export default function SettingsPage() {
                 }
               >
                 <SelectTrigger id="settings-theme" className="w-full">
-                  <SelectValue />
+                  <SelectValue>{themeLabels[user.theme]}</SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent align="start" alignItemWithTrigger={false}>
                   <SelectItem value="system">{t("settings.system")}</SelectItem>
                   <SelectItem value="light">{t("settings.light")}</SelectItem>
                   <SelectItem value="dark">{t("settings.dark")}</SelectItem>
@@ -316,9 +326,9 @@ export default function SettingsPage() {
                 }
               >
                 <SelectTrigger id="settings-language" className="w-full">
-                  <SelectValue />
+                  <SelectValue>{languageLabels[language]}</SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent align="start" alignItemWithTrigger={false}>
                   <SelectItem value="en">English (EN)</SelectItem>
                   <SelectItem value="ru">Русский (RU)</SelectItem>
                   <SelectItem value="uz">O‘zbekcha (UZ)</SelectItem>

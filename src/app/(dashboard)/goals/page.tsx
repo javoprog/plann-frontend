@@ -105,7 +105,6 @@ function GoalsContent() {
             })),
           ]}
           onValueChange={changeCategory}
-          className="basis-full"
         />
         <CollectionFilter
           label={t("form.status")}

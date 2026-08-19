@@ -109,10 +109,9 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon">
-        <SidebarHeader>
-          <AppLogo className="h-12 px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>span:last-child]:hidden" />
+        <SidebarHeader className="h-14 justify-center border-b border-sidebar-border">
+          <AppLogo className="h-10 px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>span:last-child]:hidden" />
         </SidebarHeader>
-        <SidebarSeparator />
 
         <SidebarContent>
           <SidebarGroup>
@@ -165,7 +164,7 @@ export default function DashboardLayout({
                   render={
                     <SidebarMenuButton
                       size="lg"
-                      tooltip={t("common.userMenu")}
+                      aria-label={t("common.userMenu")}
                     />
                   }
                 >
@@ -182,7 +181,12 @@ export default function DashboardLayout({
                   </div>
                   <ChevronsUpDown className="ml-auto" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent side="right" align="end" className="w-64">
+                <DropdownMenuContent
+                  side="right"
+                  sideOffset={8}
+                  align="end"
+                  className="w-64"
+                >
                   <DropdownMenuLabel>
                     <span className="block truncate font-medium text-foreground">
                       {user.name}
@@ -207,8 +211,8 @@ export default function DashboardLayout({
       </Sidebar>
 
       <SidebarInset>
-        <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
-          <div className="flex h-14 items-center gap-2 px-4 sm:px-6">
+        <header className="sticky top-0 z-30 h-14 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
+          <div className="flex h-full items-center gap-2 px-4 sm:px-6">
             <SidebarTrigger aria-label={t("common.openNavigation")} />
             <Separator orientation="vertical" className="mx-1 h-4" />
             <AppLogo className="md:hidden" />

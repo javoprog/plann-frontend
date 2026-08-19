@@ -1,8 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import { SlidersHorizontal } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Field, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -10,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 
 export interface CollectionOption<Value extends string = string> {
@@ -26,92 +25,79 @@ export function CollectionToolbar({
   sort?: ReactNode;
 }) {
   return (
-    <Card size="sm">
-      <CardContent className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+    <Card size="sm" className="py-2">
+      <CardContent className="flex flex-wrap items-center gap-2 px-2">
         {children && (
-          <div className="flex min-w-0 flex-1 flex-wrap items-end gap-4">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <SlidersHorizontal
+              className="mx-1 size-4 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
             {children}
           </div>
         )}
-        {sort && (
-          <div className="w-full shrink-0 xl:ml-auto xl:w-52">{sort}</div>
-        )}
+        {sort && <div className="ml-auto shrink-0">{sort}</div>}
       </CardContent>
     </Card>
   );
 }
 
-export function CollectionFilter<Value extends string>({
+function CollectionSelect<Value extends string>({
+  id,
   label,
   value,
   options,
   onValueChange,
   className,
 }: {
+  id?: string;
   label: string;
   value: Value;
   options: readonly CollectionOption<Value>[];
   onValueChange: (value: Value) => void;
   className?: string;
 }) {
+  const selectedLabel =
+    options.find((option) => option.value === value)?.label ?? value;
+
   return (
-    <FieldSet className={cn("min-w-0 gap-2", className)}>
-      <FieldLegend variant="label" className="text-xs text-muted-foreground">
-        {label}
-      </FieldLegend>
-      <ToggleGroup
-        variant="outline"
+    <Select
+      value={value}
+      onValueChange={(nextValue) => onValueChange(nextValue as Value)}
+    >
+      <SelectTrigger
+        id={id}
         size="sm"
-        value={[value]}
-        onValueChange={(values) => {
-          const nextValue = values.at(-1) as Value | undefined;
-          if (nextValue) onValueChange(nextValue);
-        }}
-        className="flex-wrap"
+        aria-label={label}
+        className={cn("min-w-32 max-w-56", className)}
       >
+        <span className="text-muted-foreground">{label}:</span>
+        <SelectValue>{selectedLabel}</SelectValue>
+      </SelectTrigger>
+      <SelectContent align="start" alignItemWithTrigger={false}>
         {options.map((option) => (
-          <ToggleGroupItem key={option.value} value={option.value}>
+          <SelectItem key={option.value} value={option.value}>
             {option.label}
-          </ToggleGroupItem>
+          </SelectItem>
         ))}
-      </ToggleGroup>
-    </FieldSet>
+      </SelectContent>
+    </Select>
   );
+}
+
+type CollectionSelectProps<Value extends string> = ComponentProps<
+  typeof CollectionSelect<Value>
+>;
+
+export function CollectionFilter<Value extends string>(
+  props: Omit<CollectionSelectProps<Value>, "id">,
+) {
+  return <CollectionSelect {...props} />;
 }
 
 export function CollectionSort<Value extends string>({
   id,
-  label,
-  value,
-  options,
-  onValueChange,
-}: {
-  id: string;
-  label: string;
-  value: Value;
-  options: readonly CollectionOption<Value>[];
-  onValueChange: (value: Value) => void;
-}) {
-  return (
-    <Field className="gap-2">
-      <FieldLabel htmlFor={id} className="text-xs text-muted-foreground">
-        {label}
-      </FieldLabel>
-      <Select
-        value={value}
-        onValueChange={(nextValue) => onValueChange(nextValue as Value)}
-      >
-        <SelectTrigger id={id} className="w-full">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </Field>
-  );
+  ...props
+}: CollectionSelectProps<Value> & { id: string }) {
+  return <CollectionSelect id={id} {...props} />;
 }

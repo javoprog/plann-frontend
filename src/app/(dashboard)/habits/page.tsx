@@ -174,7 +174,6 @@ function HabitsContent() {
             })),
           ]}
           onValueChange={changeCategory}
-          className="basis-full"
         />
         <CollectionFilter
           label={t("form.frequency")}

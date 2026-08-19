@@ -68,6 +68,20 @@ export function TaskFormDialog({
       : undefined,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const recurrenceLabels: Record<RecurrenceInterval, string> = {
+    DAILY: t("recurrence.daily"),
+    WEEKLY: t("recurrence.weekly"),
+    MONTHLY: t("recurrence.monthly"),
+  };
+  const priorityLabels: Record<Priority, string> = {
+    LOW: t("priority.low"),
+    MEDIUM: t("priority.medium"),
+    HIGH: t("priority.high"),
+  };
+  const selectedGoalLabel =
+    goalId === "standalone"
+      ? t("common.standalone")
+      : (goals.find((goal) => goal.id === goalId)?.title ?? goalId);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -152,9 +166,11 @@ export function TaskFormDialog({
                       }
                     >
                       <SelectTrigger id="task-recurrence" className="w-full">
-                        <SelectValue />
+                        <SelectValue>
+                          {recurrenceLabels[recurrenceInterval]}
+                        </SelectValue>
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent align="start" alignItemWithTrigger={false}>
                         <SelectItem value="DAILY">
                           {t("recurrence.daily")}
                         </SelectItem>
@@ -192,9 +208,9 @@ export function TaskFormDialog({
                     onValueChange={(value) => setGoalId(String(value))}
                   >
                     <SelectTrigger id="task-goal" className="w-full">
-                      <SelectValue />
+                      <SelectValue>{selectedGoalLabel}</SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent align="start" alignItemWithTrigger={false}>
                       <SelectItem value="standalone">
                         {t("common.standalone")}
                       </SelectItem>
@@ -215,9 +231,9 @@ export function TaskFormDialog({
                     onValueChange={(value) => setPriority(value as Priority)}
                   >
                     <SelectTrigger id="task-priority" className="w-full">
-                      <SelectValue />
+                      <SelectValue>{priorityLabels[priority]}</SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent align="start" alignItemWithTrigger={false}>
                       <SelectItem value="LOW">{t("priority.low")}</SelectItem>
                       <SelectItem value="MEDIUM">
                         {t("priority.medium")}

@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
+import { GoalFormDialog } from "@/components/goals/goal-form-dialog";
 import { StreakBadge } from "@/components/habits/habit-badges";
 import { MonthlyDots } from "@/components/habits/monthly-dots";
 import { useLanguage } from "@/components/providers/language-provider";
@@ -47,7 +48,7 @@ import {
   celebrateNewlyCompletedGoals,
 } from "@/lib/confetti";
 import { formatDate, getLocalDateKey, isToday } from "@/lib/format";
-import type { Goal, Habit, Task } from "@/lib/types";
+import type { Category, Goal, Habit, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
@@ -56,24 +57,29 @@ export default function DashboardPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [updatingHabitId, setUpdatingHabitId] = useState<string | null>(null);
+  const [goalFormOpen, setGoalFormOpen] = useState(false);
   const [taskFormOpen, setTaskFormOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
     setLoadFailed(false);
     try {
-      const [goalsResponse, tasksResponse, habitsResponse] = await Promise.all([
-        api.get<Goal[]>("/goals"),
-        api.get<Task[]>("/tasks"),
-        api.get<Habit[]>("/habits"),
-      ]);
+      const [goalsResponse, tasksResponse, habitsResponse, categoriesResponse] =
+        await Promise.all([
+          api.get<Goal[]>("/goals"),
+          api.get<Task[]>("/tasks"),
+          api.get<Habit[]>("/habits"),
+          api.get<Category[]>("/categories"),
+        ]);
       setGoals(goalsResponse.data);
       setTasks(tasksResponse.data);
       setHabits(habitsResponse.data);
+      setCategories(categoriesResponse.data);
     } catch {
       setLoadFailed(true);
     } finally {
@@ -356,7 +362,10 @@ export default function DashboardPage() {
                 title={t("dashboard.noActiveGoals")}
                 className="min-h-56 border-0"
                 action={
-                  <Button variant="outline" render={<Link href="/goals?create=true" />}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setGoalFormOpen(true)}
+                  >
                     <Plus /> {t("dashboard.createFirstGoal")}
                   </Button>
                 }
@@ -495,6 +504,14 @@ export default function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      <GoalFormDialog
+        key={`dashboard-goal-${goalFormOpen}`}
+        open={goalFormOpen}
+        onOpenChange={setGoalFormOpen}
+        categories={categories}
+        onSaved={() => void loadData()}
+      />
 
       <TaskFormDialog
         key={`dashboard-task-${taskFormOpen}`}
