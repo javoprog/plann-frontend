@@ -276,7 +276,7 @@ export default function SettingsPage() {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              System follows the appearance preference of your device.
+              {t("settings.systemThemeHint")}
             </p>
           </CardContent>
         </Card>

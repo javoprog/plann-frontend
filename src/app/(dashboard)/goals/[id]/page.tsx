@@ -1,24 +1,27 @@
-"use client";
-
 import { Suspense, useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   CalendarDays,
+  ChevronRight,
   Flame,
   Loader2,
+  Pencil,
   Plus,
   Sparkles,
   Target,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { StatusBadge } from "@/components/dashboard/status-badge";
+import { GoalFormDialog } from "@/components/goals/goal-form-dialog";
 import { HabitFormDialog } from "@/components/habits/habit-form-dialog";
 import { MonthlyDots } from "@/components/habits/monthly-dots";
 import { useLanguage } from "@/components/providers/language-provider";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { PriorityBadge } from "@/components/tasks/priority-badge";
 import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -41,12 +44,17 @@ type AiPlanGenerationResponse =
 
 function GoalPageContent() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const { refreshUser } = useAuth();
   const { language, t } = useLanguage();
   const [goal, setGoal] = useState<Goal | null>(null);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [habitFormOpen, setHabitFormOpen] = useState(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
@@ -102,6 +110,20 @@ function GoalPageContent() {
     }
   }
 
+  async function deleteGoal() {
+    if (!goal || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await api.delete(`/goals/${goal.id}`);
+      toast.success(t("toast.goalDeleted"));
+      void refreshUser().catch(() => undefined);
+      router.replace("/goals");
+    } catch (error) {
+      toast.error(getApiError(error));
+      setIsDeleting(false);
+    }
+  }
+
   const isGoalEmpty = (goal?.tasks?.length ?? 0) === 0 && habits.length === 0;
 
   if (isLoading) {
@@ -122,12 +144,16 @@ function GoalPageContent() {
 
   return (
     <div className="flex flex-col space-y-6">
-      <Link
-        href="/goals"
-        className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+      <nav
+        className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
+        aria-label="Breadcrumb"
       >
-        <ArrowLeft className="size-4" /> {t("actions.backToGoals")}
-      </Link>
+        <Link className="hover:text-foreground" href="/goals">
+          {t("nav.goals")}
+        </Link>
+        <ChevronRight className="size-3.5" />
+        <span className="max-w-64 truncate text-foreground">{goal.title}</span>
+      </nav>
 
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="space-y-5">
@@ -154,6 +180,7 @@ function GoalPageContent() {
               </span>
             </div>
           </div>
+
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium">{t("goals.progress")}</span>
@@ -166,6 +193,15 @@ function GoalPageContent() {
                 total: goal.totalTasks,
               })}
             </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setFormOpen(true)}>
+              <Pencil className="size-4" /> {t("actions.editGoal")}
+            </Button>
+            <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+              <Trash2 className="size-4" /> {t("actions.deleteGoal")}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -314,6 +350,22 @@ function GoalPageContent() {
         </Card>
       </div>
 
+      <GoalFormDialog
+        key={`goal-edit-${formOpen}`}
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        categories={categories}
+        goal={goal}
+        onSaved={() => void loadData()}
+      />
+      <ConfirmDeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={t("actions.deleteGoal")}
+        description={t("actions.confirmDeleteGoal")}
+        isDeleting={isDeleting}
+        onConfirm={() => void deleteGoal()}
+      />
       <TaskFormDialog
         key={`goal-task-${taskFormOpen}`}
         open={taskFormOpen}

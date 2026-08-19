@@ -302,7 +302,7 @@ function TasksContent() {
             </span>
             <h2 className="font-semibold">{emptyStateTitle}</h2>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-              Add a task or switch tabs to see another part of your list.
+              {t("tasks.switchTabsHint")}
             </p>
             <Button className="mt-4" variant="outline" onClick={createTask}>
               <Plus className="size-4" /> {t("actions.createTask")}

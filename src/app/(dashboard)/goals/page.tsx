@@ -2,28 +2,14 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  CalendarDays,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Target,
-  Trash2,
-} from "lucide-react";
+import { CalendarDays, Plus, Target } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { GoalFormDialog } from "@/components/goals/goal-form-dialog";
 import { useLanguage } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
 import { api, getApiError } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -40,7 +26,6 @@ const GOAL_CATEGORY_FILTERS = [
 ] as const;
 
 function GoalsContent() {
-  const { refreshUser } = useAuth();
   const { language, t } = useLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,7 +36,6 @@ function GoalsContent() {
   const [status, setStatus] = useState<StatusFilter>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
-  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const categoryFilters = GOAL_CATEGORY_FILTERS.map((name) =>
     categories.find((category) => category.name === name),
   ).filter((category): category is Category => Boolean(category));
@@ -90,7 +74,6 @@ function GoalsContent() {
   }, [loadGoals]);
 
   function createGoal() {
-    setEditingGoal(null);
     setFormOpen(true);
   }
 
@@ -99,25 +82,6 @@ function GoalsContent() {
     if (value === "all") params.delete("categoryId");
     else params.set("categoryId", value);
     router.push(`/goals${params.size ? `?${params.toString()}` : ""}`);
-  }
-
-  function editGoal(goal: Goal) {
-    setEditingGoal(goal);
-    setFormOpen(true);
-  }
-
-  async function deleteGoal(goal: Goal) {
-    if (!window.confirm(`Delete “${goal.title}” and its linked tasks?`)) return;
-    try {
-      await api.delete(`/goals/${goal.id}`);
-      void refreshUser().catch((error: unknown) =>
-        toast.error(getApiError(error)),
-      );
-      toast.success(t("toast.goalDeleted"));
-      void loadGoals();
-    } catch (error) {
-      toast.error(getApiError(error));
-    }
   }
 
   return (
@@ -207,40 +171,12 @@ function GoalsContent() {
               }}
             >
               <CardHeader>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <CategoryBadge category={goal.category} />
-                      <StatusBadge status={goal.status} />
-                    </div>
-                    <CardTitle className="text-lg">{goal.title}</CardTitle>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CategoryBadge category={goal.category} />
+                    <StatusBadge status={goal.status} />
                   </div>
-                  <div onClick={(event) => event.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label="Goal actions"
-                          />
-                        }
-                      >
-                        <MoreHorizontal className="size-4" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => editGoal(goal)}>
-                          <Pencil className="size-4" /> {t("actions.edit")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => void deleteGoal(goal)}
-                        >
-                          <Trash2 className="size-4" /> {t("actions.delete")}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                  <CardTitle className="text-lg">{goal.title}</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -250,7 +186,7 @@ function GoalsContent() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">
-                      {goal.completedTasks}/{goal.totalTasks} tasks
+                      {goal.completedTasks}/{goal.totalTasks} {t("nav.tasks").toLowerCase()}
                     </span>
                     <span className="font-medium">{goal.progress}%</span>
                   </div>
@@ -271,8 +207,7 @@ function GoalsContent() {
           </span>
           <h2 className="font-semibold">{t("goals.noGoals")}</h2>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            Create a goal or change your filters to see what you are working
-            toward.
+            {t("goals.filterHint")}
           </p>
           <Button className="mt-4" variant="outline" onClick={createGoal}>
             <Plus className="size-4" /> {t("actions.createGoal")}
@@ -281,11 +216,10 @@ function GoalsContent() {
       )}
 
       <GoalFormDialog
-        key={`${editingGoal?.id ?? "new"}-${formOpen}`}
+        key={`new-${formOpen}`}
         open={formOpen}
         onOpenChange={setFormOpen}
         categories={categories}
-        goal={editingGoal}
         onSaved={() => void loadGoals()}
       />
     </div>

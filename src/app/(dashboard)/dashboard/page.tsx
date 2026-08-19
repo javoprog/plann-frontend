@@ -177,7 +177,10 @@ export default function DashboardPage() {
     {
       label: t("dashboard.pendingToday"),
       value: pendingToday.length,
-      hint: pendingToday.length === 1 ? "task needs attention" : "tasks need attention",
+      hint:
+        pendingToday.length === 1
+          ? t("dashboard.taskAttentionOne")
+          : t("dashboard.taskAttentionOther"),
       icon: Clock3,
     },
   ];
@@ -307,7 +310,7 @@ export default function DashboardPage() {
                   {t("dashboard.noActiveGoals")}
                 </p>
                 <Link className="mt-2 text-sm text-muted-foreground hover:underline" href="/goals?create=true">
-                  Create your first goal
+                  {t("dashboard.createFirstGoal")}
                 </Link>
               </div>
             )}
@@ -372,7 +375,7 @@ export default function DashboardPage() {
                   {t("dashboard.allCaughtUp")}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Add a task when you are ready for the next step.
+                  {t("dashboard.readyForNextStep")}
                 </p>
               </div>
             )}

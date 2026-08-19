@@ -224,7 +224,7 @@ export default function HabitsPage() {
           <Flame className="size-8 text-muted-foreground" />
           <h2 className="mt-3 font-semibold">{t("habits.noHabits")}</h2>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            Start with one small ritual you can repeat today.
+            {t("habits.smallRitualHint")}
           </p>
           <Button className="mt-4" variant="outline" onClick={createHabit}>
             <Plus className="size-4" /> {t("actions.createHabit")}

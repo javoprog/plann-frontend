@@ -116,7 +116,7 @@ export function GoalFormDialog({
               name="title"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="What do you want to achieve?"
+              placeholder={t("form.goalTitlePlaceholder")}
               minLength={2}
               maxLength={160}
               required
@@ -129,7 +129,7 @@ export function GoalFormDialog({
               name="description"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="Add context, a desired result, or a useful note."
+              placeholder={t("form.goalDescriptionPlaceholder")}
               rows={4}
             />
           </div>
@@ -145,7 +145,7 @@ export function GoalFormDialog({
                     {categoryId === "none"
                       ? t("common.noCategory")
                       : categories.find((category) => category.id === categoryId)
-                          ?.name ?? "Choose a category"}
+                          ?.name ?? t("form.chooseCategory")}
                   </span>
                 </SelectTrigger>
                 <SelectContent>
