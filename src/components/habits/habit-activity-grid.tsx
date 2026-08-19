@@ -1,6 +1,12 @@
 "use client";
 
 import { useLanguage } from "@/components/providers/language-provider";
+import { Toggle } from "@/components/ui/toggle";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { getLocalDateKey } from "@/lib/format";
 import type { Habit, HabitFrequency } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -54,26 +60,31 @@ export function HabitActivityGrid({
           day: "numeric",
         }).format(date);
 
+        const accessibleLabel = `${label}: ${
+          completed ? t("common.completed") : t("common.notCompleted")
+        }`;
+
         return (
-          <button
-            key={dateKey}
-            type="button"
-            title={`${label}: ${
-              completed ? t("common.completed") : t("common.notCompleted")
-            }`}
-            className={cn(
-              "aspect-square min-h-5 rounded-md border bg-muted transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              completed && "border-emerald-500 bg-emerald-500",
-              !scheduled && !completed && "border-dashed opacity-40",
-              updatingDate === dateKey && "animate-pulse",
-            )}
-            aria-label={`${label}: ${
-              completed ? t("common.completed") : t("common.notCompleted")
-            }`}
-            aria-pressed={completed}
-            disabled={Boolean(updatingDate)}
-            onClick={() => onToggle(dateKey)}
-          />
+          <Tooltip key={dateKey}>
+            <TooltipTrigger
+              render={
+                <Toggle
+                  variant="outline"
+                  pressed={completed}
+                  className={cn(
+                    "aspect-square h-auto min-h-7 min-w-0 p-0",
+                    completed &&
+                      "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
+                    !scheduled && !completed && "border-dashed opacity-40",
+                  )}
+                  aria-label={accessibleLabel}
+                  disabled={!scheduled || Boolean(updatingDate)}
+                  onPressedChange={() => onToggle(dateKey)}
+                />
+              }
+            />
+            <TooltipContent>{accessibleLabel}</TooltipContent>
+          </Tooltip>
         );
       })}
     </div>

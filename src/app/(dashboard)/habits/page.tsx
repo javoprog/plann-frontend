@@ -1,50 +1,74 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, Flame, Plus } from "lucide-react";
+import { Check, Flame, Plus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useLanguage } from "@/components/providers/language-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
+import {
+  HabitFrequencyBadge,
+  StreakBadge,
+} from "@/components/habits/habit-badges";
 import { HabitFormDialog } from "@/components/habits/habit-form-dialog";
 import { MonthlyDots } from "@/components/habits/monthly-dots";
-import { Badge } from "@/components/ui/badge";
+import {
+  EmptyState,
+  LoadError,
+  PageSkeleton,
+} from "@/components/shared/async-state";
+import {
+  CollectionFilter,
+  CollectionSort,
+  CollectionToolbar,
+} from "@/components/shared/collection-toolbar";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
+import { useCategoryFilter } from "@/hooks/use-category-filter";
 import { api, getApiError } from "@/lib/api";
 import { celebrateHabitCompletion } from "@/lib/confetti";
+import { getCategoryLabel } from "@/lib/constants/categories";
 import { getLocalDateKey } from "@/lib/format";
-import type { Category, Goal, Habit } from "@/lib/types";
+import type { Category, Goal, Habit, HabitFrequency } from "@/lib/types";
 
-export default function HabitsPage() {
+type HabitSort = "streak" | "name";
+type HabitFrequencyFilter = HabitFrequency | "all";
+
+function HabitsContent() {
   const { refreshUser } = useAuth();
   const { t } = useLanguage();
+  const { categoryId, changeCategory } = useCategoryFilter("/habits");
   const [habits, setHabits] = useState<Habit[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [updatingHabitId, setUpdatingHabitId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [sort, setSort] = useState<"streak" | "name">("streak");
+  const [sort, setSort] = useState<HabitSort>("streak");
+  const [frequencyFilter, setFrequencyFilter] =
+    useState<HabitFrequencyFilter>("all");
   const today = getLocalDateKey();
-  const sortedHabits = useMemo(
-    () =>
-      [...habits].sort((first, second) =>
+  const visibleHabits = useMemo(() => {
+    const filtered = habits.filter(
+      (habit) =>
+        (categoryId === "all" || habit.category?.id === categoryId) &&
+        (frequencyFilter === "all" || habit.frequency === frequencyFilter),
+    );
+    return [...filtered].sort((first, second) =>
         sort === "streak"
           ? second.currentStreak - first.currentStreak
           : first.title.localeCompare(second.title),
-      ),
-    [habits, sort],
-  );
+      );
+  }, [categoryId, frequencyFilter, habits, sort]);
+  const hasActiveFilters =
+    categoryId !== "all" || frequencyFilter !== "all";
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
+    setLoadFailed(false);
     try {
       const [habitsResponse, categoriesResponse, goalsResponse] =
         await Promise.all([
@@ -55,8 +79,8 @@ export default function HabitsPage() {
       setHabits(habitsResponse.data);
       setCategories(categoriesResponse.data);
       setGoals(goalsResponse.data);
-    } catch (error) {
-      toast.error(getApiError(error));
+    } catch {
+      setLoadFailed(true);
     } finally {
       setIsLoading(false);
     }
@@ -71,6 +95,8 @@ export default function HabitsPage() {
   }
 
   async function toggleToday(habit: Habit) {
+    if (updatingHabitId) return;
+    setUpdatingHabitId(habit.id);
     const wasCompleted = habit.logs.some(
       (log) => log.date === today && log.completed,
     );
@@ -106,65 +132,77 @@ export default function HabitsPage() {
         current.map((item) => (item.id === habit.id ? habit : item)),
       );
       toast.error(getApiError(error));
+    } finally {
+      setUpdatingHabitId(null);
     }
   }
 
   return (
     <div className="flex flex-col space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {t("habits.title")}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t("habits.description")}
-          </p>
-        </div>
-        <div>
+      <PageHeader
+        title={t("habits.title")}
+        description={t("habits.description")}
+        action={
           <Button onClick={createHabit}>
-            <Plus className="size-4" /> {t("actions.newHabit")}
+            <Plus className="size-4" /> {t("actions.createHabit")}
           </Button>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="flex justify-end">
-        <Select
-          value={sort}
-          onValueChange={(value) => setSort(value as "streak" | "name")}
-        >
-          <SelectTrigger className="w-full sm:w-48">
-            <span>
-              {sort === "streak"
-                ? t("habits.sortStreak")
-                : t("habits.sortName")}
-            </span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="streak">{t("habits.sortStreak")}</SelectItem>
-            <SelectItem value="name">{t("habits.sortName")}</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <CollectionToolbar
+        sort={
+          <CollectionSort
+            id="habit-sort"
+            label={t("common.sortBy")}
+            value={sort}
+            options={[
+              { value: "streak", label: t("habits.sortStreak") },
+              { value: "name", label: t("habits.sortName") },
+            ]}
+            onValueChange={setSort}
+          />
+        }
+      >
+        <CollectionFilter
+          label={t("form.category")}
+          value={categoryId}
+          options={[
+            { value: "all", label: t("common.all") },
+            ...categories.map((category) => ({
+              value: category.id,
+              label: getCategoryLabel(category.name, t),
+            })),
+          ]}
+          onValueChange={changeCategory}
+          className="basis-full"
+        />
+        <CollectionFilter
+          label={t("form.frequency")}
+          value={frequencyFilter}
+          options={[
+            { value: "all", label: t("common.all") },
+            { value: "DAILY", label: t("frequency.daily") },
+            { value: "WEEKDAYS", label: t("frequency.weekdays") },
+            { value: "WEEKENDS", label: t("frequency.weekends") },
+          ]}
+          onValueChange={setFrequencyFilter}
+        />
+      </CollectionToolbar>
 
       {isLoading ? (
+        <PageSkeleton />
+      ) : loadFailed ? (
+        <LoadError onRetry={() => void loadData()} />
+      ) : visibleHabits.length ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {[0, 1, 2].map((item) => (
-            <div
-              key={item}
-              className="h-52 animate-pulse rounded-xl bg-muted"
-            />
-          ))}
-        </div>
-      ) : habits.length ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {sortedHabits.map((habit) => {
+          {visibleHabits.map((habit) => {
             const completedToday = habit.logs.some(
               (log) => log.date === today && log.completed,
             );
             return (
               <Card
                 key={habit.id}
-                className="transition-colors hover:border-primary/30"
+                className="transition-colors hover:bg-muted/30"
               >
                 <Link
                   href={`/habits/${encodeURIComponent(habit.id)}`}
@@ -174,31 +212,16 @@ export default function HabitsPage() {
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <CategoryBadge category={habit.category} />
-                        <Badge variant="secondary" className="gap-1">
-                          <Flame className="size-3 text-orange-500" />
-                          {t("common.dayStreak", {
-                            count: habit.currentStreak,
-                          })}
-                        </Badge>
+                        <HabitFrequencyBadge frequency={habit.frequency} />
+                        <StreakBadge count={habit.currentStreak} />
                       </div>
                       <CardTitle className="text-lg">{habit.title}</CardTitle>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4 pb-4">
-                    <div>
-                      <p className="text-sm font-medium">
-                        {t(
-                          habit.frequency === "DAILY"
-                            ? "frequency.daily"
-                            : habit.frequency === "WEEKDAYS"
-                              ? "frequency.weekdays"
-                              : "frequency.weekends",
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {habit.goal?.title ?? t("habits.independent")}
-                      </p>
-                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {habit.goal?.title ?? t("habits.independent")}
+                    </p>
                     <MonthlyDots habit={habit} />
                   </CardContent>
                 </Link>
@@ -207,6 +230,7 @@ export default function HabitsPage() {
                     className="w-full"
                     size="sm"
                     variant={completedToday ? "default" : "outline"}
+                    disabled={Boolean(updatingHabitId)}
                     onClick={() => void toggleToday(habit)}
                   >
                     <Check className="size-4" />
@@ -220,16 +244,32 @@ export default function HabitsPage() {
           })}
         </div>
       ) : (
-        <div className="flex min-h-72 flex-col items-center justify-center rounded-xl border border-dashed bg-background text-center">
-          <Flame className="size-8 text-muted-foreground" />
-          <h2 className="mt-3 font-semibold">{t("habits.noHabits")}</h2>
-          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            {t("habits.smallRitualHint")}
-          </p>
-          <Button className="mt-4" variant="outline" onClick={createHabit}>
-            <Plus className="size-4" /> {t("actions.createHabit")}
-          </Button>
-        </div>
+        <EmptyState
+          icon={Flame}
+          title={t("habits.noHabits")}
+          description={t(
+            hasActiveFilters
+              ? "habits.filterHint"
+              : "habits.smallRitualHint",
+          )}
+          action={
+            hasActiveFilters ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  changeCategory("all");
+                  setFrequencyFilter("all");
+                }}
+              >
+                <RotateCcw /> {t("actions.clearFilters")}
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={createHabit}>
+                <Plus /> {t("actions.createHabit")}
+              </Button>
+            )
+          }
+        />
       )}
 
       <HabitFormDialog
@@ -241,5 +281,13 @@ export default function HabitsPage() {
         onSaved={() => void loadData()}
       />
     </div>
+  );
+}
+
+export default function HabitsPage() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <HabitsContent />
+    </Suspense>
   );
 }

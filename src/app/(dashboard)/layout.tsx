@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   CheckSquare2,
+  ChevronsUpDown,
   CircleGauge,
   Flame,
   LogOut,
@@ -15,12 +16,45 @@ import {
 import { useAuth } from "@/components/auth/auth-provider";
 import { AppLogo } from "@/components/dashboard/app-logo";
 import { CommandMenu } from "@/components/dashboard/command-menu";
+import { useLanguage } from "@/components/providers/language-provider";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Progress } from "@/components/ui/progress";
-import { useLanguage } from "@/components/providers/language-provider";
+import { Separator } from "@/components/ui/separator";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarSeparator,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { TranslationKey } from "@/lib/i18n/translations";
-import { cn } from "@/lib/utils";
 
 const navigation: Array<{
   label: TranslationKey;
@@ -51,10 +85,10 @@ export default function DashboardLayout({
 
   if (isLoading || !user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-muted/30">
+      <main className="flex min-h-svh items-center justify-center bg-muted/30">
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <span className="size-2 animate-pulse rounded-full bg-primary" />
-          Loading your plan…
+          <Spinner aria-label={t("common.loading")} />
+          {t("common.loading")}
         </div>
       </main>
     );
@@ -73,133 +107,149 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 md:grid md:grid-cols-[260px_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-screen flex-col border-r bg-background md:flex">
-        <div className="flex h-16 items-center border-b px-5">
-          <AppLogo />
-        </div>
+    <SidebarProvider>
+      <Sidebar collapsible="icon">
+        <SidebarHeader>
+          <AppLogo className="h-12 px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>span:last-child]:hidden" />
+        </SidebarHeader>
+        <SidebarSeparator />
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-5">
-          <nav className="space-y-1">
-            {navigation.map((item) => {
-              const active = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
-                >
-                  <item.icon className="size-4" />
-                  {t(item.label)}
-                </Link>
-              );
-            })}
-          </nav>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>{t("common.workspace")}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {navigation.map((item) => {
+                  const active =
+                    pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        render={
+                          <Link
+                            href={item.href}
+                            aria-current={active ? "page" : undefined}
+                          />
+                        }
+                        isActive={active}
+                        tooltip={t(item.label)}
+                      >
+                        <item.icon />
+                        <span>{t(item.label)}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
 
-        </div>
-
-        <div className="border-t p-3">
-          <div className="rounded-xl bg-muted/60 p-3">
-            <div className="flex items-center gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                {initials}
+        <SidebarFooter>
+          <div className="space-y-2 px-2 pb-1 group-data-[collapsible=icon]:hidden">
+            <div className="flex items-center justify-between gap-2">
+              <Badge variant="secondary">
+                {t("dashboard.currentLevel")} {user.level}
+              </Badge>
+              <span className="text-xs text-muted-foreground">
+                {t("dashboard.xpTotal", { xp: user.xp })}
               </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{user.name}</p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {user.email}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={handleLogout}
-                aria-label={t("actions.logOut")}
-              >
-                <LogOut className="size-4" />
-              </Button>
             </div>
-            <div className="mt-3 space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <Badge variant="secondary">
-                  {t("dashboard.currentLevel")} {user.level}
-                </Badge>
-                <span className="text-[11px] text-muted-foreground">
-                  {t("dashboard.xpTotal", { xp: user.xp })}
-                </span>
-              </div>
-              <Progress value={user.xp % 100} />
-              <p className="text-[11px] text-muted-foreground">
-                {t("dashboard.toNext", { xp: user.xpToNextLevel })}
-              </p>
-            </div>
+            <Progress value={user.xp % 100} />
           </div>
-        </div>
-      </aside>
-
-      <div className="min-w-0">
-        <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur">
-          <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
-            <AppLogo className="mr-auto md:hidden" />
-            <div className="hidden w-full md:block">
-              <Button
-                variant="outline"
-                className="relative w-full max-w-md justify-start bg-muted/50 text-muted-foreground"
-                onClick={() => setCommandOpen(true)}
-              >
-                <Search className="mr-2 size-4" />
-                <span className="truncate">
-                  {t("command.searchPlaceholder")}
-                </span>
-                <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden h-5 -translate-y-1/2 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-                  <span className="text-xs">⌘</span>K
-                </kbd>
-              </Button>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              <nav className="flex items-center md:hidden">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setCommandOpen(true)}
-                  aria-label={t("command.searchPlaceholder")}
+          <SidebarSeparator />
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <SidebarMenuButton
+                      size="lg"
+                      tooltip={t("common.userMenu")}
+                    />
+                  }
                 >
-                  <Search className="size-4" />
-                </Button>
-                {navigation.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-label={t(item.label)}
-                    className={cn(
-                      "rounded-lg p-2 text-muted-foreground",
-                      pathname === item.href && "bg-muted text-foreground",
-                    )}
-                  >
-                    <item.icon className="size-4" />
-                  </Link>
-                ))}
-              </nav>
-              <Button
-                className="md:hidden"
-                variant="outline"
-                size="icon"
-                onClick={handleLogout}
-                aria-label={t("actions.logOut")}
+                  <Avatar size="sm">
+                    <AvatarFallback>{initials}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1 text-left">
+                    <span className="block truncate text-sm font-medium">
+                      {user.name}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {user.email}
+                    </span>
+                  </div>
+                  <ChevronsUpDown className="ml-auto" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="right" align="end" className="w-64">
+                  <DropdownMenuLabel>
+                    <span className="block truncate font-medium text-foreground">
+                      {user.name}
+                    </span>
+                    <span className="block truncate font-normal">{user.email}</span>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push("/settings")}>
+                    <Settings />
+                    {t("nav.settings")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+                    <LogOut />
+                    {t("actions.logOut")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
+
+      <SidebarInset>
+        <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
+          <div className="flex h-14 items-center gap-2 px-4 sm:px-6">
+            <SidebarTrigger aria-label={t("common.openNavigation")} />
+            <Separator orientation="vertical" className="mx-1 h-4" />
+            <AppLogo className="md:hidden" />
+
+            <Button
+              variant="outline"
+              className="ml-auto hidden w-full max-w-md justify-start text-muted-foreground sm:flex"
+              onClick={() => setCommandOpen(true)}
+            >
+              <Search />
+              <span className="truncate">{t("command.searchPlaceholder")}</span>
+              <KbdGroup className="ml-auto hidden lg:inline-flex">
+                <Kbd>Ctrl</Kbd>
+                <Kbd>K</Kbd>
+              </KbdGroup>
+            </Button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="ml-auto sm:hidden"
+                    onClick={() => setCommandOpen(true)}
+                    aria-label={t("command.searchPlaceholder")}
+                  />
+                }
               >
-                <LogOut className="size-4" />
-              </Button>
-            </div>
+                <Search />
+              </TooltipTrigger>
+              <TooltipContent>{t("command.searchPlaceholder")}</TooltipContent>
+            </Tooltip>
           </div>
         </header>
-        <main className="p-4 sm:p-6">{children}</main>
-      </div>
+
+        <div className="flex-1 bg-muted/20 p-4 sm:p-6 lg:p-8">
+          <div className="mx-auto w-full max-w-screen-2xl">{children}</div>
+        </div>
+      </SidebarInset>
+
       <CommandMenu open={commandOpen} onOpenChange={setCommandOpen} />
-    </div>
+    </SidebarProvider>
   );
 }

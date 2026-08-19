@@ -6,9 +6,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   CalendarDays,
-  ChevronRight,
+  CheckSquare2,
   Flame,
-  Loader2,
   Pencil,
   Plus,
   Sparkles,
@@ -20,16 +19,41 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { GoalFormDialog } from "@/components/goals/goal-form-dialog";
+import {
+  HabitFrequencyBadge,
+  StreakBadge,
+} from "@/components/habits/habit-badges";
 import { HabitFormDialog } from "@/components/habits/habit-form-dialog";
 import { MonthlyDots } from "@/components/habits/monthly-dots";
 import { useLanguage } from "@/components/providers/language-provider";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
+import { DetailBreadcrumb } from "@/components/shared/detail-breadcrumb";
+import { DetailMetaBadge } from "@/components/shared/detail-meta-badge";
 import { PriorityBadge } from "@/components/tasks/priority-badge";
 import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
-import { Badge } from "@/components/ui/badge";
+import {
+  EmptyState,
+  LoadError,
+  PageSkeleton,
+} from "@/components/shared/async-state";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item";
 import { Progress } from "@/components/ui/progress";
+import { Spinner } from "@/components/ui/spinner";
 import { api, getApiError } from "@/lib/api";
 import { celebrateGoalCompletion } from "@/lib/confetti";
 import { formatDate } from "@/lib/format";
@@ -54,6 +78,7 @@ function GoalPageContent() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -63,6 +88,7 @@ function GoalPageContent() {
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
+    setLoadFailed(false);
     try {
       const [goalResponse, habitsResponse, categoriesResponse, goalsResponse] =
         await Promise.all([
@@ -75,8 +101,8 @@ function GoalPageContent() {
       setHabits(habitsResponse.data.filter((habit) => habit.goalId === id));
       setCategories(categoriesResponse.data);
       setGoals(goalsResponse.data);
-    } catch (error) {
-      toast.error(getApiError(error));
+    } catch {
+      setLoadFailed(true);
       setGoal(null);
     } finally {
       setIsLoading(false);
@@ -129,35 +155,31 @@ function GoalPageContent() {
   const isGoalEmpty = (goal?.tasks?.length ?? 0) === 0 && habits.length === 0;
 
   if (isLoading) {
-    return <div className="h-96 animate-pulse rounded-xl bg-muted" />;
+    return <PageSkeleton variant="detail" />;
+  }
+
+  if (loadFailed) {
+    return <LoadError onRetry={() => void loadData()} />;
   }
 
   if (!goal) {
     return (
-      <div className="flex min-h-72 flex-col items-center justify-center rounded-xl border border-dashed bg-background text-center">
-        <Target className="size-8 text-muted-foreground" />
-        <p className="mt-3 font-medium">{t("goals.noGoals")}</p>
-        <Link className="mt-3 text-sm hover:underline" href="/goals">
-          {t("actions.backToGoals")}
-        </Link>
-      </div>
+      <EmptyState
+        icon={Target}
+        title={t("goals.noGoals")}
+        action={<Button render={<Link href="/goals" />}>{t("actions.backToGoals")}</Button>}
+      />
     );
   }
 
   return (
     <div className="flex flex-col space-y-6">
-      <nav
-        className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
-        aria-label="Breadcrumb"
-      >
-        <Link className="hover:text-foreground" href="/goals">
-          {t("nav.goals")}
-        </Link>
-        <ChevronRight className="size-3.5" />
-        <span className="max-w-64 truncate text-foreground">{goal.title}</span>
-      </nav>
+      <DetailBreadcrumb
+        root={{ href: "/goals", label: t("nav.goals") }}
+        currentLabel={goal.title}
+      />
 
-      <Card className="border-primary/20 bg-primary/5">
+      <Card>
         <CardContent className="space-y-5">
           <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
             <div className="min-w-0 space-y-3">
@@ -166,7 +188,7 @@ function GoalPageContent() {
                 <StatusBadge status={goal.status} />
               </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                   {goal.title}
                 </h1>
                 <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
@@ -174,13 +196,12 @@ function GoalPageContent() {
                 </p>
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm">
-              <CalendarDays className="size-4 text-muted-foreground" />
+            <DetailMetaBadge icon={CalendarDays}>
               <span>
                 {t("goals.targetDeadline")}:{" "}
                 {formatDate(goal.deadline, language, t("common.noDueDate"))}
               </span>
-            </div>
+            </DetailMetaBadge>
           </div>
 
           <div className="space-y-2">
@@ -199,10 +220,10 @@ function GoalPageContent() {
 
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setFormOpen(true)}>
-              <Pencil className="size-4" /> {t("actions.editGoal")}
+              <Pencil className="size-4" /> {t("actions.edit")}
             </Button>
             <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
-              <Trash2 className="size-4" /> {t("actions.deleteGoal")}
+              <Trash2 className="size-4" /> {t("actions.delete")}
             </Button>
           </div>
         </CardContent>
@@ -222,14 +243,12 @@ function GoalPageContent() {
             </p>
             <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button
-                className={cn(
-                  "min-w-48",
-                  isGeneratingAi && "animate-pulse shadow-lg shadow-primary/30",
-                )}
+                className="min-w-48"
                 disabled={isGeneratingAi}
                 onClick={() => void generateAiPlan()}
               >
-                {isGeneratingAi && <Loader2 className="size-4 animate-spin" />}
+                {isGeneratingAi && <Spinner aria-label={t("common.loading")} />}
+                {!isGeneratingAi && <Sparkles />}
                 {isGeneratingAi ? t("ai.generating") : t("generatePlan")}
               </Button>
               <Button
@@ -246,28 +265,34 @@ function GoalPageContent() {
 
       <div className={cn("grid gap-6 xl:grid-cols-2", isGoalEmpty && "hidden")}>
         <Card>
-          <CardHeader className="flex-row items-center justify-between gap-3">
+          <CardHeader>
             <CardTitle>{t("goals.linkedTasks")}</CardTitle>
-            <Button size="sm" onClick={() => setTaskFormOpen(true)}>
-              <Plus className="size-4" /> {t("actions.addTask")}
-            </Button>
+            <CardAction>
+              <Button size="sm" onClick={() => setTaskFormOpen(true)}>
+                <Plus className="size-4" /> {t("actions.addTask")}
+              </Button>
+            </CardAction>
           </CardHeader>
           <CardContent>
             {goal.tasks?.length ? (
-              <div className="space-y-3">
+              <ItemGroup className="gap-2">
                 {goal.tasks.map((task) => {
                   const subtasks = task.subtasks ?? [];
                   const completedSubtasks = subtasks.filter(
                     (subtask) => subtask.isCompleted,
                   ).length;
                   return (
-                    <Link
+                    <Item
                       key={task.id}
-                      href={`/tasks/${encodeURIComponent(task.id)}`}
-                      className="block rounded-lg border p-3 transition-colors hover:border-primary/30 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      variant="outline"
+                      className="items-start"
+                      render={
+                        <Link href={`/tasks/${encodeURIComponent(task.id)}`} />
+                      }
                     >
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p
+                      <ItemContent>
+                        <ItemTitle className="w-full flex-wrap">
+                          <span
                           className={cn(
                             "min-w-0 flex-1 truncate text-sm font-medium",
                             task.isCompleted &&
@@ -275,78 +300,83 @@ function GoalPageContent() {
                           )}
                         >
                           {task.title}
-                        </p>
-                        <PriorityBadge priority={task.priority} />
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <span>
-                          {formatDate(
-                            task.dueDate,
-                            language,
-                            t("common.noDueDate"),
-                          )}
-                        </span>
-                        <span>
-                          {t("tasks.subtasks", {
-                            completed: completedSubtasks,
-                            total: subtasks.length,
-                          })}
-                        </span>
-                      </div>
-                    </Link>
+                          </span>
+                          <PriorityBadge priority={task.priority} />
+                        </ItemTitle>
+                        <ItemDescription className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                          <span>
+                            {formatDate(
+                              task.dueDate,
+                              language,
+                              t("common.noDueDate"),
+                            )}
+                          </span>
+                          <span>
+                            {t("tasks.subtasks", {
+                              completed: completedSubtasks,
+                              total: subtasks.length,
+                            })}
+                          </span>
+                        </ItemDescription>
+                      </ItemContent>
+                    </Item>
                   );
                 })}
-              </div>
+              </ItemGroup>
             ) : (
-              <p className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-                {t("goals.noLinkedTasks")}
-              </p>
+              <EmptyState
+                icon={CheckSquare2}
+                title={t("goals.noLinkedTasks")}
+                className="min-h-40 border-0"
+              />
             )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex-row items-center justify-between gap-3">
+          <CardHeader>
             <CardTitle>{t("goals.linkedHabits")}</CardTitle>
-            <Button size="sm" onClick={() => setHabitFormOpen(true)}>
-              <Plus className="size-4" /> {t("actions.addHabit")}
-            </Button>
+            <CardAction>
+              <Button size="sm" onClick={() => setHabitFormOpen(true)}>
+                <Plus className="size-4" /> {t("actions.addHabit")}
+              </Button>
+            </CardAction>
           </CardHeader>
           <CardContent>
             {habits.length ? (
-              <div className="space-y-3">
+              <ItemGroup className="gap-2">
                 {habits.map((habit) => (
-                  <Link
+                  <Item
                     key={habit.id}
-                    href={`/habits/${encodeURIComponent(habit.id)}`}
-                    className="block space-y-3 rounded-lg border p-3 transition-colors hover:border-primary/30 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    variant="outline"
+                    className="items-start"
+                    render={
+                      <Link href={`/habits/${encodeURIComponent(habit.id)}`} />
+                    }
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="flex size-9 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
+                    <ItemMedia variant="icon">
+                      <span className="flex size-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
                         <Flame className="size-4" />
                       </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">
-                          {habit.title}
-                        </p>
-                        <div className="mt-1 flex flex-wrap gap-2">
-                          <CategoryBadge category={habit.category} />
-                          <Badge variant="secondary">
-                            {t("common.dayStreak", {
-                              count: habit.currentStreak,
-                            })}
-                          </Badge>
-                        </div>
+                    </ItemMedia>
+                    <ItemContent className="min-w-0">
+                      <ItemTitle>{habit.title}</ItemTitle>
+                      <div className="flex flex-wrap gap-2">
+                        <CategoryBadge category={habit.category} />
+                        <HabitFrequencyBadge frequency={habit.frequency} />
+                        <StreakBadge count={habit.currentStreak} />
                       </div>
-                    </div>
-                    <MonthlyDots habit={habit} />
-                  </Link>
+                      <MonthlyDots habit={habit} />
+                    </ItemContent>
+                  </Item>
                 ))}
-              </div>
+              </ItemGroup>
             ) : (
-              <p className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-                {t("goals.noLinkedHabits")}
-              </p>
+              <EmptyState
+                icon={Flame}
+                title={t("goals.noLinkedHabits")}
+                className="min-h-40 border-0"
+              />
             )}
           </CardContent>
         </Card>
@@ -363,7 +393,7 @@ function GoalPageContent() {
       <ConfirmDeleteDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title={t("actions.deleteGoal")}
+        title={t("actions.deleteNamed", { name: goal.title })}
         description={t("actions.confirmDeleteGoal")}
         isDeleting={isDeleting}
         onConfirm={() => void deleteGoal()}
@@ -393,7 +423,7 @@ function GoalPageContent() {
 export default function GoalPage() {
   return (
     <Suspense
-      fallback={<div className="h-96 animate-pulse rounded-xl bg-muted" />}
+      fallback={<PageSkeleton variant="detail" />}
     >
       <GoalPageContent />
     </Suspense>

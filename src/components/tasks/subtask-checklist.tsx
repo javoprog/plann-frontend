@@ -168,6 +168,7 @@ export function SubtaskChecklist({
                     value={editingTitle}
                     onChange={(event) => setEditingTitle(event.target.value)}
                     maxLength={200}
+                    aria-label={`${t("actions.edit")}: ${subtask.title}`}
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
                         event.preventDefault();

@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/command";
 import { api, getApiError } from "@/lib/api";
 import type { TranslationKey } from "@/lib/i18n/translations";
-import type { Category, Goal, SearchResults, Task } from "@/lib/types";
+import type { Category, Goal, SearchResults } from "@/lib/types";
 
 interface CommandMenuProps {
   open: boolean;
@@ -66,6 +66,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults>(emptyResults);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchFailed, setSearchFailed] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [goalDialogOpen, setGoalDialogOpen] = useState(false);
@@ -74,6 +75,16 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   const formOptionsRequest = useRef<Promise<void> | null>(null);
   const trimmedQuery = query.trim();
 
+  const setMenuOpen = useCallback((nextOpen: boolean) => {
+    if (!nextOpen) {
+      setQuery("");
+      setResults(emptyResults);
+      setIsSearching(false);
+      setSearchFailed(false);
+    }
+    onOpenChange(nextOpen);
+  }, [onOpenChange]);
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (
@@ -81,20 +92,13 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
         (event.metaKey || event.ctrlKey)
       ) {
         event.preventDefault();
-        onOpenChange(!open);
+        setMenuOpen(!open);
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onOpenChange, open]);
-
-  useEffect(() => {
-    if (open) return;
-    setQuery("");
-    setResults(emptyResults);
-    setIsSearching(false);
-  }, [open]);
+  }, [open, setMenuOpen]);
 
   useEffect(() => {
     if (!open || trimmedQuery.length < 2) return;
@@ -106,9 +110,15 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
           params: { q: trimmedQuery },
           signal: controller.signal,
         })
-        .then(({ data }) => setResults(data))
+        .then(({ data }) => {
+          setResults(data);
+          setSearchFailed(false);
+        })
         .catch(() => {
-          if (!controller.signal.aborted) setResults(emptyResults);
+          if (!controller.signal.aborted) {
+            setResults(emptyResults);
+            setSearchFailed(true);
+          }
         })
         .finally(() => {
           if (!controller.signal.aborted) setIsSearching(false);
@@ -140,12 +150,13 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   }, []);
 
   function navigate(href: string) {
-    onOpenChange(false);
+    setMenuOpen(false);
     router.push(href);
   }
 
   function handleQueryChange(nextQuery: string) {
     setQuery(nextQuery);
+    setSearchFailed(false);
     if (nextQuery.trim().length < 2) {
       setResults(emptyResults);
       setIsSearching(false);
@@ -155,7 +166,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   }
 
   async function openQuickAction(action: QuickAction) {
-    onOpenChange(false);
+    setMenuOpen(false);
     try {
       await loadFormOptions();
       if (action === "goal") setGoalDialogOpen(true);
@@ -176,7 +187,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
     <>
       <CommandDialog
         open={open}
-        onOpenChange={onOpenChange}
+        onOpenChange={setMenuOpen}
         title={t("command.searchPlaceholder")}
         description={t("command.searchPlaceholder")}
         className="sm:max-w-xl"
@@ -188,7 +199,11 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
         />
         <CommandList>
           <CommandEmpty>
-            {isSearching ? t("search.searching") : t("command.noResults")}
+            {isSearching
+              ? t("search.searching")
+              : searchFailed
+                ? t("common.loadFailed")
+                : t("command.noResults")}
           </CommandEmpty>
 
           <CommandGroup heading={t("command.navigation")}>
@@ -208,25 +223,25 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
 
           <CommandGroup heading={t("command.actions")}>
             <CommandItem
-              value={`${t("actions.createGoal")} goal`}
+              value={`${t("actions.createGoal")} ${t("nav.goals")}`}
               onSelect={() => void openQuickAction("goal")}
             >
               <Plus className="size-4 text-muted-foreground" />
               <span>{t("actions.createGoal")}</span>
             </CommandItem>
             <CommandItem
-              value={`${t("actions.newTask")} task`}
+              value={`${t("actions.createTask")} ${t("nav.tasks")}`}
               onSelect={() => void openQuickAction("task")}
             >
               <Plus className="size-4 text-muted-foreground" />
-              <span>{t("actions.newTask")}</span>
+              <span>{t("actions.createTask")}</span>
             </CommandItem>
             <CommandItem
-              value={`${t("actions.newHabit")} habit`}
+              value={`${t("actions.createHabit")} ${t("nav.habits")}`}
               onSelect={() => void openQuickAction("habit")}
             >
               <Plus className="size-4 text-muted-foreground" />
-              <span>{t("actions.newHabit")}</span>
+              <span>{t("actions.createHabit")}</span>
             </CommandItem>
           </CommandGroup>
 
@@ -256,19 +271,22 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
       </CommandDialog>
 
       <GoalFormDialog
+        key={`command-goal-${goalDialogOpen}`}
         open={goalDialogOpen}
         onOpenChange={setGoalDialogOpen}
         categories={categories}
         onSaved={() => handleSaved("/goals")}
       />
       <TaskFormDialog
+        key={`command-task-${taskDialogOpen}`}
         open={taskDialogOpen}
         onOpenChange={setTaskDialogOpen}
         goals={goals}
-        onTaskChanged={(_task: Task) => undefined}
+        onTaskChanged={() => undefined}
         onSaved={() => handleSaved("/tasks")}
       />
       <HabitFormDialog
+        key={`command-habit-${habitDialogOpen}`}
         open={habitDialogOpen}
         onOpenChange={setHabitDialogOpen}
         categories={categories}

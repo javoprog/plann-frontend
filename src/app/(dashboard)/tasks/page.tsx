@@ -9,31 +9,44 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { CalendarDays, CheckSquare2, Plus } from "lucide-react";
+import { CalendarDays, CheckSquare2, Plus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useLanguage } from "@/components/providers/language-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
 import { PriorityBadge } from "@/components/tasks/priority-badge";
 import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
+import {
+  EmptyState,
+  LoadError,
+  PageSkeleton,
+} from "@/components/shared/async-state";
+import {
+  CollectionFilter,
+  CollectionSort,
+  CollectionToolbar,
+} from "@/components/shared/collection-toolbar";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@/components/ui/item";
+import { useCategoryFilter } from "@/hooks/use-category-filter";
 import { api, getApiError } from "@/lib/api";
+import { getCategoryLabel } from "@/lib/constants/categories";
 import { celebrateNewlyCompletedGoals } from "@/lib/confetti";
 import { formatDate, isOverdue, isThisWeek, isToday } from "@/lib/format";
 import { withTaskCompletion } from "@/lib/task-completion";
-import type { Goal, Task } from "@/lib/types";
+import type { Category, Goal, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type TaskTab = "all" | "standalone" | "linked";
+type TaskRelationshipFilter = "all" | "standalone" | "linked";
 type TaskDateFilter = "all" | "today" | "week" | "overdue";
 type TaskSort = "dueDate" | "priority";
 
@@ -42,19 +55,23 @@ const PRIORITY_SORT_ORDER = { HIGH: 3, MEDIUM: 2, LOW: 1 } as const;
 function TasksContent() {
   const { refreshUser } = useAuth();
   const { language, t } = useLanguage();
-  const searchParams = useSearchParams();
-  const categoryId = searchParams.get("categoryId");
+  const { categoryId, changeCategory, searchParams } =
+    useCategoryFilter("/tasks");
   const handledCreate = useRef(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [tab, setTab] = useState<TaskTab>("all");
+  const [relationship, setRelationship] =
+    useState<TaskRelationshipFilter>("all");
   const [dateFilter, setDateFilter] = useState<TaskDateFilter>("all");
   const [sort, setSort] = useState<TaskSort>("dueDate");
   const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
+    setLoadFailed(false);
     try {
       const [tasksResponse, goalsResponse] = await Promise.all([
         api.get<Task[]>("/tasks"),
@@ -62,8 +79,8 @@ function TasksContent() {
       ]);
       setTasks(tasksResponse.data);
       setGoals(goalsResponse.data);
-    } catch (error) {
-      toast.error(getApiError(error));
+    } catch {
+      setLoadFailed(true);
     } finally {
       setIsLoading(false);
     }
@@ -77,14 +94,22 @@ function TasksContent() {
     queueMicrotask(() => void loadData());
   }, [loadData, searchParams]);
 
+  const categoryFilters = useMemo(() => {
+    const uniqueCategories = new Map<string, Category>();
+    goals.forEach((goal) => {
+      if (goal.category) uniqueCategories.set(goal.category.id, goal.category);
+    });
+    return [...uniqueCategories.values()];
+  }, [goals]);
+
   const filteredTasks = useMemo(() => {
     let filtered = tasks;
-    if (tab === "standalone") {
+    if (relationship === "standalone") {
       filtered = filtered.filter((task) => !task.goalId);
-    } else if (tab === "linked") {
+    } else if (relationship === "linked") {
       filtered = filtered.filter((task) => Boolean(task.goalId));
     }
-    if (categoryId) {
+    if (categoryId !== "all") {
       filtered = filtered.filter(
         (task) => task.goal?.category?.id === categoryId,
       );
@@ -111,7 +136,7 @@ function TasksContent() {
         new Date(first.dueDate).getTime() - new Date(second.dueDate).getTime()
       );
     });
-  }, [categoryId, dateFilter, sort, tab, tasks]);
+  }, [categoryId, dateFilter, relationship, sort, tasks]);
 
   const emptyStateTitle =
     dateFilter === "overdue"
@@ -121,6 +146,10 @@ function TasksContent() {
         : dateFilter === "week"
           ? t("tasks.noThisWeek")
           : t("tasks.noTasks");
+  const hasActiveFilters =
+    relationship !== "all" ||
+    categoryId !== "all" ||
+    dateFilter !== "all";
 
   function updateTask(updatedTask: Task) {
     setTasks((current) =>
@@ -150,7 +179,9 @@ function TasksContent() {
   }
 
   async function toggleTask(task: Task, isCompleted: boolean) {
+    if (updatingTaskId) return;
     const previousGoals = goals;
+    setUpdatingTaskId(task.id);
     updateTask(withTaskCompletion(task, isCompleted));
     try {
       const { data } = await api.patch<Task>(`/tasks/${task.id}`, {
@@ -161,155 +192,166 @@ function TasksContent() {
     } catch (error) {
       updateTask(task);
       toast.error(getApiError(error));
+    } finally {
+      setUpdatingTaskId(null);
     }
   }
 
   return (
     <div className="flex flex-col space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {t("tasks.title")}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t("tasks.description")}
-          </p>
-        </div>
-        <div>
+      <PageHeader
+        title={t("tasks.title")}
+        description={t("tasks.description")}
+        action={
           <Button onClick={createTask}>
             <Plus className="size-4" /> {t("actions.createTask")}
           </Button>
-        </div>
-      </div>
+        }
+      />
 
-      <Tabs value={tab} onValueChange={(value) => setTab(value as TaskTab)}>
-        <TabsList>
-          <TabsTrigger value="all">{t("tasks.all")}</TabsTrigger>
-          <TabsTrigger value="standalone">{t("tasks.standalone")}</TabsTrigger>
-          <TabsTrigger value="linked">{t("tasks.linked")}</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <CollectionToolbar
+        sort={
+          <CollectionSort
+            id="task-sort"
+            label={t("common.sortBy")}
+            value={sort}
+            options={[
+              { value: "dueDate", label: t("tasks.sortDueDate") },
+              { value: "priority", label: t("tasks.sortPriority") },
+            ]}
+            onValueChange={setSort}
+          />
+        }
+      >
+        <CollectionFilter
+          label={t("tasks.relationship")}
+          value={relationship}
+          options={[
+            { value: "all", label: t("common.all") },
+            { value: "standalone", label: t("tasks.standalone") },
+            { value: "linked", label: t("tasks.linked") },
+          ]}
+          onValueChange={setRelationship}
+        />
+        <CollectionFilter
+          label={t("form.category")}
+          value={categoryId}
+          options={[
+            { value: "all", label: t("common.all") },
+            ...categoryFilters.map((category) => ({
+              value: category.id,
+              label: getCategoryLabel(category.name, t),
+            })),
+          ]}
+          onValueChange={changeCategory}
+        />
+        <CollectionFilter
+          label={t("form.dueDate")}
+          value={dateFilter}
+          options={[
+            { value: "all", label: t("common.all") },
+            { value: "today", label: t("tasks.today") },
+            { value: "week", label: t("tasks.thisWeek") },
+            { value: "overdue", label: t("tasks.overdue") },
+          ]}
+          onValueChange={setDateFilter}
+        />
+      </CollectionToolbar>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              ["all", t("tasks.all")],
-              ["today", t("tasks.today")],
-              ["week", t("tasks.thisWeek")],
-              ["overdue", t("tasks.overdue")],
-            ] as const
-          ).map(([value, label]) => (
-            <Button
-              key={value}
-              size="sm"
-              variant={dateFilter === value ? "default" : "outline"}
-              onClick={() => setDateFilter(value)}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
-        <Select
-          value={sort}
-          onValueChange={(value) => setSort(value as TaskSort)}
-        >
-          <SelectTrigger className="w-full sm:w-48">
-            <span>
-              {sort === "dueDate"
-                ? t("tasks.sortDueDate")
-                : t("tasks.sortPriority")}
-            </span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="dueDate">{t("tasks.sortDueDate")}</SelectItem>
-            <SelectItem value="priority">{t("tasks.sortPriority")}</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="overflow-hidden rounded-xl border bg-background">
-        {isLoading ? (
-          <div className="space-y-3 p-4">
-            {[0, 1, 2, 3].map((item) => (
-              <div
-                key={item}
-                className="h-16 animate-pulse rounded-lg bg-muted"
-              />
-            ))}
-          </div>
-        ) : filteredTasks.length ? (
-          <div className="divide-y">
-            {filteredTasks.map((task) => (
-              <div
-                key={task.id}
-                className="flex items-start gap-3 p-4 transition-colors hover:bg-muted/30"
-              >
-                <Checkbox
-                  className="mt-1"
-                  checked={task.isCompleted}
-                  onCheckedChange={(checked) =>
-                    void toggleTask(task, Boolean(checked))
-                  }
-                  aria-label={`Mark ${task.title} complete`}
-                />
-                <Link
-                  href={`/tasks/${encodeURIComponent(task.id)}`}
-                  className="min-w-0 flex-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      {isLoading ? (
+        <PageSkeleton variant="list" count={4} />
+      ) : loadFailed ? (
+        <LoadError onRetry={() => void loadData()} />
+      ) : filteredTasks.length ? (
+        <Card>
+          <CardContent>
+            <ItemGroup className="gap-1">
+              {filteredTasks.map((task) => (
+                <Item
+                  key={task.id}
+                  role="listitem"
+                  className="items-start hover:bg-muted/50"
                 >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p
-                      className={cn(
-                        "font-medium",
-                        task.isCompleted &&
-                          "text-muted-foreground line-through",
+                  <Checkbox
+                    className="mt-1"
+                    checked={task.isCompleted}
+                    disabled={Boolean(updatingTaskId)}
+                    onCheckedChange={(checked) =>
+                      void toggleTask(task, Boolean(checked))
+                    }
+                    aria-label={
+                      task.isCompleted
+                        ? `${t("actions.undo")}: ${task.title}`
+                        : `${t("actions.markTaskComplete")}: ${task.title}`
+                    }
+                  />
+                  <ItemContent className="min-w-0">
+                    <ItemTitle className="flex-wrap">
+                      <Link
+                        href={`/tasks/${encodeURIComponent(task.id)}`}
+                        className={cn(
+                          "rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          task.isCompleted &&
+                            "text-muted-foreground line-through",
+                        )}
+                      >
+                        {task.title}
+                      </Link>
+                      <PriorityBadge priority={task.priority} />
+                      {task.goal?.category && (
+                        <CategoryBadge category={task.goal.category} />
                       )}
-                    >
-                      {task.title}
-                    </p>
-                    <PriorityBadge priority={task.priority} />
-                    {task.goal?.category && (
-                      <CategoryBadge category={task.goal.category} />
-                    )}
-                  </div>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    <span>{task.goal?.title ?? t("common.standalone")}</span>
-                    <span className="flex items-center gap-1">
-                      <CalendarDays className="size-3" />{" "}
-                      {formatDate(
-                        task.dueDate,
-                        language,
-                        t("common.noDueDate"),
-                      )}
-                    </span>
-                    <span>
-                      {t("tasks.subtasks", {
-                        completed: (task.subtasks ?? []).filter(
-                          (subtask) => subtask.isCompleted,
-                        ).length,
-                        total: task.subtasks?.length ?? 0,
-                      })}
-                    </span>
-                  </div>
-                </Link>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex min-h-72 flex-col items-center justify-center px-4 text-center">
-            <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
-              <CheckSquare2 className="size-6 text-muted-foreground" />
-            </span>
-            <h2 className="font-semibold">{emptyStateTitle}</h2>
-            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-              {t("tasks.switchTabsHint")}
-            </p>
-            <Button className="mt-4" variant="outline" onClick={createTask}>
-              <Plus className="size-4" /> {t("actions.createTask")}
-            </Button>
-          </div>
-        )}
-      </div>
+                    </ItemTitle>
+                    <ItemDescription className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                      <span>{task.goal?.title ?? t("common.standalone")}</span>
+                      <span className="flex items-center gap-1">
+                        <CalendarDays className="size-3" />{" "}
+                        {formatDate(
+                          task.dueDate,
+                          language,
+                          t("common.noDueDate"),
+                        )}
+                      </span>
+                      <span>
+                        {t("tasks.subtasks", {
+                          completed: (task.subtasks ?? []).filter(
+                            (subtask) => subtask.isCompleted,
+                          ).length,
+                          total: task.subtasks?.length ?? 0,
+                        })}
+                      </span>
+                    </ItemDescription>
+                  </ItemContent>
+                </Item>
+              ))}
+            </ItemGroup>
+          </CardContent>
+        </Card>
+      ) : (
+        <EmptyState
+          icon={CheckSquare2}
+          title={emptyStateTitle}
+          description={t("tasks.adjustFiltersHint")}
+          action={
+            hasActiveFilters ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRelationship("all");
+                  changeCategory("all");
+                  setDateFilter("all");
+                }}
+              >
+                <RotateCcw /> {t("actions.clearFilters")}
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={createTask}>
+                <Plus /> {t("actions.createTask")}
+              </Button>
+            )
+          }
+        />
+      )}
 
       <TaskFormDialog
         key={`new-${formOpen}`}
@@ -325,9 +367,7 @@ function TasksContent() {
 
 export default function TasksPage() {
   return (
-    <Suspense
-      fallback={<div className="h-72 animate-pulse rounded-xl bg-muted" />}
-    >
+    <Suspense fallback={<PageSkeleton variant="list" count={4} />}>
       <TasksContent />
     </Suspense>
   );

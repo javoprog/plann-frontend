@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
@@ -14,15 +13,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Spinner } from "@/components/ui/spinner";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { api, getApiError } from "@/lib/api";
+import { getCategoryLabel } from "@/lib/constants/categories";
 import type {
   Category,
   Goal,
@@ -97,48 +100,42 @@ export function HabitFormDialog({
           </DialogTitle>
           <DialogDescription>{t("form.habitDescriptionText")}</DialogDescription>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="habit-title">{t("form.title")}</Label>
+        <form className="min-h-0" onSubmit={handleSubmit}>
+          <ScrollArea className="-mx-1 max-h-[60svh] px-1">
+          <FieldGroup className="py-1 pr-3">
+          <Field>
+            <FieldLabel htmlFor="habit-title">{t("form.title")}</FieldLabel>
             <Input
               id="habit-title"
               name="title"
               defaultValue={habit?.title ?? ""}
-              placeholder="Read for 20 minutes"
+              placeholder={t("form.habitTitlePlaceholder")}
               minLength={2}
               maxLength={200}
               required
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="habit-description">{t("form.description")}</Label>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="habit-description">{t("form.description")}</FieldLabel>
             <Textarea
               id="habit-description"
               name="description"
               defaultValue={habit?.description ?? ""}
-              placeholder="Why does this ritual matter?"
+              placeholder={t("form.habitDescriptionPlaceholder")}
               rows={3}
             />
-          </div>
+          </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>{t("form.frequency")}</Label>
+            <Field>
+              <FieldLabel htmlFor="habit-frequency">{t("form.frequency")}</FieldLabel>
               <Select
                 value={frequency}
                 onValueChange={(value) =>
                   setFrequency(value as HabitFrequency)
                 }
               >
-                <SelectTrigger className="w-full">
-                  <span>
-                    {t(
-                      frequency === "DAILY"
-                        ? "frequency.daily"
-                        : frequency === "WEEKDAYS"
-                          ? "frequency.weekdays"
-                          : "frequency.weekends",
-                    )}
-                  </span>
+                <SelectTrigger id="habit-frequency" className="w-full">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="DAILY">{t("frequency.daily")}</SelectItem>
@@ -146,45 +143,35 @@ export function HabitFormDialog({
                   <SelectItem value="WEEKENDS">{t("frequency.weekends")}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>{t("form.category")}</Label>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="habit-category">{t("form.category")}</FieldLabel>
               <Select
                 value={categoryId}
                 onValueChange={(value) => setCategoryId(String(value))}
               >
-                <SelectTrigger className="w-full">
-                  <span className="truncate">
-                    {categoryId === "none"
-                      ? t("common.noCategory")
-                      : categories.find((item) => item.id === categoryId)?.name ??
-                        t("common.noCategory")}
-                  </span>
+                <SelectTrigger id="habit-category" className="w-full">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">{t("common.noCategory")}</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
-                      {category.name}
+                      {getCategoryLabel(category.name, t)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
           </div>
-          <div className="space-y-2">
-            <Label>{t("form.relatedGoal")}</Label>
+          <Field>
+            <FieldLabel htmlFor="habit-goal">{t("form.relatedGoal")}</FieldLabel>
             <Select
               value={goalId}
               onValueChange={(value) => setGoalId(String(value))}
             >
-              <SelectTrigger className="w-full">
-                <span className="truncate">
-                  {goalId === "none"
-                    ? t("form.noRelatedGoal")
-                    : goals.find((item) => item.id === goalId)?.title ??
-                      t("form.noRelatedGoal")}
-                </span>
+              <SelectTrigger id="habit-goal" className="w-full">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">{t("form.noRelatedGoal")}</SelectItem>
@@ -195,8 +182,10 @@ export function HabitFormDialog({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <DialogFooter>
+          </Field>
+          </FieldGroup>
+          </ScrollArea>
+          <DialogFooter className="mt-4">
             <Button
               type="button"
               variant="outline"
@@ -205,7 +194,7 @@ export function HabitFormDialog({
               {t("actions.cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+              {isSubmitting && <Spinner aria-label={t("common.loading")} />}
               {habit ? t("actions.saveChanges") : t("actions.createHabit")}
             </Button>
           </DialogFooter>

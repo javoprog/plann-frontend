@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowRight,
   Check,
   CheckCircle2,
   Clock3,
@@ -15,13 +14,33 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
+import { StreakBadge } from "@/components/habits/habit-badges";
 import { MonthlyDots } from "@/components/habits/monthly-dots";
 import { useLanguage } from "@/components/providers/language-provider";
+import { EmptyState, LoadError } from "@/components/shared/async-state";
+import { PageHeader } from "@/components/shared/page-header";
+import { ViewAllLink } from "@/components/shared/view-all-link";
 import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldTitle,
+} from "@/components/ui/field";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { api, getApiError } from "@/lib/api";
 import {
   celebrateHabitCompletion,
@@ -38,10 +57,14 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
+  const [updatingHabitId, setUpdatingHabitId] = useState<string | null>(null);
   const [taskFormOpen, setTaskFormOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
+    setLoadFailed(false);
     try {
       const [goalsResponse, tasksResponse, habitsResponse] = await Promise.all([
         api.get<Goal[]>("/goals"),
@@ -51,8 +74,8 @@ export default function DashboardPage() {
       setGoals(goalsResponse.data);
       setTasks(tasksResponse.data);
       setHabits(habitsResponse.data);
-    } catch (error) {
-      toast.error(getApiError(error));
+    } catch {
+      setLoadFailed(true);
     } finally {
       setIsLoading(false);
     }
@@ -92,6 +115,8 @@ export default function DashboardPage() {
   });
 
   async function toggleTask(task: Task, isCompleted: boolean) {
+    if (updatingTaskId) return;
+    setUpdatingTaskId(task.id);
     setTasks((current) =>
       current.map((item) =>
         item.id === task.id ? { ...item, isCompleted } : item,
@@ -120,10 +145,14 @@ export default function DashboardPage() {
         ),
       );
       toast.error(getApiError(error));
+    } finally {
+      setUpdatingTaskId(null);
     }
   }
 
   async function toggleHabit(habit: Habit) {
+    if (updatingHabitId) return;
+    setUpdatingHabitId(habit.id);
     const wasCompleted = habit.logs.some(
       (log) => log.date === todayKey && log.completed,
     );
@@ -155,6 +184,8 @@ export default function DashboardPage() {
         current.map((item) => (item.id === habit.id ? habit : item)),
       );
       toast.error(getApiError(error));
+    } finally {
+      setUpdatingHabitId(null);
     }
   }
 
@@ -185,29 +216,37 @@ export default function DashboardPage() {
     },
   ];
 
+  const createTaskButton = (
+    <Button onClick={() => setTaskFormOpen(true)}>
+      <Plus className="size-4" /> {t("actions.createTask")}
+    </Button>
+  );
+
+  if (!isLoading && loadFailed) {
+    return (
+      <div className="flex flex-col space-y-6">
+        <PageHeader
+          title={t("dashboard.title")}
+          description={t("dashboard.description")}
+        />
+        <LoadError onRetry={() => void loadData()} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {t("dashboard.title")}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t("dashboard.description")}
-          </p>
-        </div>
-        <div>
-          <Button onClick={() => setTaskFormOpen(true)}>
-            <Plus className="size-4" /> {t("actions.newTask")}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={t("dashboard.title")}
+        description={t("dashboard.description")}
+        action={createTaskButton}
+      />
 
       <Card className="border-primary/20 bg-primary/5">
         <CardContent>
           <p className="text-base font-medium">
             {t("dashboard.greeting", {
-              name: user?.name ?? "Planner",
+              name: user?.name ?? "Plann",
               count: pendingToday.length,
               streak: user?.globalStreak ?? 0,
             })}
@@ -222,7 +261,7 @@ export default function DashboardPage() {
               <div>
                 <p className="text-sm text-muted-foreground">{item.label}</p>
                 <p className="mt-2 text-3xl font-bold tracking-tight">
-                  {isLoading ? "—" : item.value}
+                  {isLoading ? <Skeleton className="h-9 w-16" /> : item.value}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">{item.hint}</p>
               </div>
@@ -240,7 +279,11 @@ export default function DashboardPage() {
                   {t("dashboard.currentLevel")}
                 </p>
                 <p className="mt-2 text-3xl font-bold tracking-tight">
-                  {isLoading ? "..." : user?.level ?? 1}
+                  {isLoading ? (
+                    <Skeleton className="h-9 w-12" />
+                  ) : (
+                    user?.level ?? 1
+                  )}
                 </p>
               </div>
               <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -262,25 +305,18 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">
         <Card>
-          <CardHeader className="flex-row items-center justify-between">
-            <div>
-              <CardTitle>{t("dashboard.activeGoals")}</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {t("dashboard.outcomesInMotion")}
-              </p>
-            </div>
-            <Link
-              href="/goals"
-              className="flex items-center gap-1 text-sm font-medium hover:underline"
-            >
-              {t("actions.viewAll")} <ArrowRight className="size-4" />
-            </Link>
+          <CardHeader>
+            <CardTitle>{t("dashboard.activeGoals")}</CardTitle>
+            <CardDescription>{t("dashboard.outcomesInMotion")}</CardDescription>
+            <CardAction>
+              <ViewAllLink href="/goals" label={t("actions.viewAll")} />
+            </CardAction>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 {[0, 1, 2, 3].map((item) => (
-                  <div key={item} className="h-36 animate-pulse rounded-xl bg-muted" />
+                  <Skeleton key={item} className="h-36" />
                 ))}
               </div>
             ) : activeGoals.length ? (
@@ -289,30 +325,42 @@ export default function DashboardPage() {
                   <Link
                     href={`/goals/${goal.id}`}
                     key={goal.id}
-                    className="rounded-xl border p-4 transition-colors hover:bg-muted/40"
+                    className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    <CategoryBadge category={goal.category} />
-                    <h3 className="mt-3 line-clamp-1 font-semibold">{goal.title}</h3>
-                    <div className="mt-4 space-y-2">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{goal.completedTasks}/{goal.totalTasks} tasks</span>
-                        <span>{goal.progress}%</span>
-                      </div>
-                      <Progress value={goal.progress} />
-                    </div>
+                    <Card size="sm" className="h-full hover:bg-muted/40">
+                      <CardContent>
+                        <CategoryBadge category={goal.category} />
+                        <CardTitle className="mt-3 line-clamp-1 text-base">
+                          {goal.title}
+                        </CardTitle>
+                        <div className="mt-4 space-y-2">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>
+                              {t("goals.tasksComplete", {
+                                completed: goal.completedTasks,
+                                total: goal.totalTasks,
+                              })}
+                            </span>
+                            <span>{goal.progress}%</span>
+                          </div>
+                          <Progress value={goal.progress} />
+                        </div>
+                      </CardContent>
+                    </Card>
                   </Link>
                 ))}
               </div>
             ) : (
-              <div className="flex min-h-56 flex-col items-center justify-center rounded-xl border border-dashed text-center">
-                <Target className="size-7 text-muted-foreground" />
-                <p className="mt-3 font-medium">
-                  {t("dashboard.noActiveGoals")}
-                </p>
-                <Link className="mt-2 text-sm text-muted-foreground hover:underline" href="/goals?create=true">
-                  {t("dashboard.createFirstGoal")}
-                </Link>
-              </div>
+              <EmptyState
+                icon={Target}
+                title={t("dashboard.noActiveGoals")}
+                className="min-h-56 border-0"
+                action={
+                  <Button variant="outline" render={<Link href="/goals?create=true" />}>
+                    <Plus /> {t("dashboard.createFirstGoal")}
+                  </Button>
+                }
+              />
             )}
           </CardContent>
         </Card>
@@ -320,89 +368,83 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>{t("dashboard.quickChecklist")}</CardTitle>
-            <p className="text-sm text-muted-foreground">
+            <CardDescription>
               {pendingToday.length
                 ? t("dashboard.dueToday")
                 : t("dashboard.nextOpenTasks")}
-            </p>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <div className="space-y-3">
                 {[0, 1, 2, 3].map((item) => (
-                  <div key={item} className="h-12 animate-pulse rounded-lg bg-muted" />
+                  <Skeleton key={item} className="h-12" />
                 ))}
               </div>
             ) : quickTasks.length ? (
-              <div className="space-y-2">
+              <FieldGroup className="gap-2">
                 {quickTasks.map((task) => (
-                  <label
-                    key={task.id}
-                    className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/40"
-                  >
-                    <Checkbox
-                      className="mt-0.5"
-                      checked={task.isCompleted}
-                      onCheckedChange={(checked) =>
-                        void toggleTask(task, Boolean(checked))
-                      }
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span
+                  <FieldLabel key={task.id} className="cursor-pointer">
+                    <Field orientation="horizontal">
+                      <Checkbox
+                        checked={task.isCompleted}
+                        disabled={Boolean(updatingTaskId)}
+                        onCheckedChange={(checked) =>
+                          void toggleTask(task, Boolean(checked))
+                        }
+                        aria-label={`${
+                          task.isCompleted
+                            ? t("actions.undo")
+                            : t("actions.markTaskComplete")
+                        }: ${task.title}`}
+                      />
+                      <FieldContent className="min-w-0">
+                        <FieldTitle
                         className={cn(
-                          "block truncate text-sm font-medium",
+                          "block truncate",
                           task.isCompleted && "text-muted-foreground line-through",
                         )}
                       >
                         {task.title}
-                      </span>
-                      <span className="mt-0.5 block text-xs text-muted-foreground">
-                        {task.goal?.title ?? t("common.standalone")} ·{" "}
-                        {formatDate(
-                          task.dueDate,
-                          language,
-                          t("common.noDueDate"),
-                        )}
-                      </span>
-                    </span>
-                  </label>
+                        </FieldTitle>
+                        <FieldDescription>
+                          {task.goal?.title ?? t("common.standalone")} ·{" "}
+                          {formatDate(
+                            task.dueDate,
+                            language,
+                            t("common.noDueDate"),
+                          )}
+                        </FieldDescription>
+                      </FieldContent>
+                    </Field>
+                  </FieldLabel>
                 ))}
-              </div>
+              </FieldGroup>
             ) : (
-              <div className="flex min-h-56 flex-col items-center justify-center text-center">
-                <CheckCircle2 className="size-8 text-emerald-500" />
-                <p className="mt-3 font-medium">
-                  {t("dashboard.allCaughtUp")}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {t("dashboard.readyForNextStep")}
-                </p>
-              </div>
+              <EmptyState
+                icon={CheckCircle2}
+                title={t("dashboard.allCaughtUp")}
+                description={t("dashboard.readyForNextStep")}
+                className="min-h-56 border-0"
+              />
             )}
           </CardContent>
         </Card>
       </div>
 
       <Card>
-        <CardHeader className="flex-row items-center justify-between">
-          <div>
-            <CardTitle>{t("dashboard.todaysHabits")}</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t("dashboard.ritualsToday")}
-            </p>
-          </div>
-          <Link
-            href="/habits"
-            className="flex items-center gap-1 text-sm font-medium hover:underline"
-          >
-            {t("actions.viewAll")} <ArrowRight className="size-4" />
-          </Link>
+        <CardHeader>
+          <CardTitle>{t("dashboard.todaysHabits")}</CardTitle>
+          <CardDescription>{t("dashboard.ritualsToday")}</CardDescription>
+          <CardAction>
+            <ViewAllLink href="/habits" label={t("actions.viewAll")} />
+          </CardAction>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {[0, 1, 2].map((item) => (
-                <div key={item} className="h-16 animate-pulse rounded-lg bg-muted" />
+                <Skeleton key={item} className="h-16" />
               ))}
             </div>
           ) : todayHabits.length ? (
@@ -412,42 +454,44 @@ export default function DashboardPage() {
                   (log) => log.date === todayKey && log.completed,
                 );
                 return (
-                  <div
-                    key={habit.id}
-                    className="space-y-3 rounded-lg border p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="flex size-9 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
-                        <Flame className="size-4" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">
-                          {habit.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {t("common.dayStreak", {
-                            count: habit.currentStreak,
-                          })}
-                        </p>
+                  <Card key={habit.id} size="sm">
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <span className="flex size-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                          <Flame className="size-4" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">
+                            {habit.title}
+                          </p>
+                          <StreakBadge count={habit.currentStreak} />
+                        </div>
+                        <Button
+                          size="icon-sm"
+                          variant={completedToday ? "default" : "outline"}
+                          disabled={Boolean(updatingHabitId)}
+                          onClick={() => void toggleHabit(habit)}
+                          aria-label={`${
+                            completedToday
+                              ? t("actions.undo")
+                              : t("actions.markDone")
+                          }: ${habit.title}`}
+                        >
+                          <Check className="size-4" />
+                        </Button>
                       </div>
-                      <Button
-                        size="icon-sm"
-                        variant={completedToday ? "default" : "outline"}
-                        onClick={() => void toggleHabit(habit)}
-                        aria-label={`${completedToday ? "Undo" : "Complete"} ${habit.title}`}
-                      >
-                        <Check className="size-4" />
-                      </Button>
-                    </div>
-                    <MonthlyDots habit={habit} />
-                  </div>
+                      <MonthlyDots habit={habit} />
+                    </CardContent>
+                  </Card>
                 );
               })}
             </div>
           ) : (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              {t("dashboard.noHabitsToday")}
-            </p>
+            <EmptyState
+              icon={Flame}
+              title={t("dashboard.noHabitsToday")}
+              className="min-h-32 border-0"
+            />
           )}
         </CardContent>
       </Card>

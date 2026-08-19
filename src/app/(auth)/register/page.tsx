@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useLanguage } from "@/components/providers/language-provider";
@@ -16,7 +16,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Spinner } from "@/components/ui/spinner";
 import { getApiError } from "@/lib/api";
 
 export default function RegisterPage() {
@@ -57,7 +58,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <Card className="border-border/70 shadow-xl shadow-black/5">
+    <Card>
       <CardHeader className="space-y-2 text-center">
         <CardTitle className="text-2xl">
           {t("auth.registerTitle")}
@@ -67,64 +68,62 @@ export default function RegisterPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="name">{t("settings.name")}</Label>
+        <form onSubmit={handleSubmit}>
+          <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="name">{t("settings.name")}</FieldLabel>
             <Input
               id="name"
               name="name"
-              placeholder="Your name"
+              placeholder={t("auth.namePlaceholder")}
               autoComplete="name"
               minLength={2}
               required
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">{t("settings.email")}</Label>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="email">{t("settings.email")}</FieldLabel>
             <Input
               id="email"
               name="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder={t("auth.emailPlaceholder")}
               autoComplete="email"
               required
             />
-          </div>
+          </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="password">{t("auth.password")}</Label>
+            <Field>
+              <FieldLabel htmlFor="password">{t("auth.password")}</FieldLabel>
               <Input
                 id="password"
                 name="password"
                 type="password"
-                placeholder="8+ characters"
+                placeholder={t("auth.newPasswordPlaceholder")}
                 autoComplete="new-password"
                 minLength={8}
                 required
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">{t("auth.confirm")}</Label>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="confirmPassword">{t("auth.confirm")}</FieldLabel>
               <Input
                 id="confirmPassword"
                 name="confirmPassword"
                 type="password"
-                placeholder="Repeat password"
+                placeholder={t("auth.confirmPasswordPlaceholder")}
                 autoComplete="new-password"
                 minLength={8}
                 required
               />
-            </div>
+            </Field>
           </div>
           <Button className="w-full" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <>
-                {t("auth.createAccount")} <ArrowRight className="size-4" />
-              </>
-            )}
+            {isSubmitting && <Spinner aria-label={t("common.loading")} />}
+            {t("auth.createAccount")}
+            {!isSubmitting && <ArrowRight />}
           </Button>
+          </FieldGroup>
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
           {t("auth.alreadyAccount")}{" "}

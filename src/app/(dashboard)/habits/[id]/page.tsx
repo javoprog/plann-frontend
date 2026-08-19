@@ -6,26 +6,43 @@ import { useParams, useRouter } from "next/navigation";
 import {
   CalendarDays,
   Check,
-  ChevronRight,
   Flame,
   History,
   Pencil,
-  Target,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { CategoryBadge } from "@/components/dashboard/category-badge";
+import { HabitFrequencyBadge } from "@/components/habits/habit-badges";
 import {
   HabitActivityGrid,
   isHabitScheduled,
 } from "@/components/habits/habit-activity-grid";
 import { HabitFormDialog } from "@/components/habits/habit-form-dialog";
 import { useLanguage } from "@/components/providers/language-provider";
+import {
+  EmptyState,
+  LoadError,
+  PageSkeleton,
+} from "@/components/shared/async-state";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
-import { Badge } from "@/components/ui/badge";
+import { DetailBreadcrumb } from "@/components/shared/detail-breadcrumb";
+import { GoalLinkBadge } from "@/components/shared/goal-link-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@/components/ui/item";
 import { Progress } from "@/components/ui/progress";
 import { api, getApiError } from "@/lib/api";
 import {
@@ -96,6 +113,7 @@ function HabitDetailContent() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [updatingDate, setUpdatingDate] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -104,6 +122,7 @@ function HabitDetailContent() {
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
+    setLoadFailed(false);
     try {
       const [habitResponse, categoriesResponse, goalsResponse] =
         await Promise.all([
@@ -114,8 +133,8 @@ function HabitDetailContent() {
       setHabit(habitResponse.data);
       setCategories(categoriesResponse.data);
       setGoals(goalsResponse.data);
-    } catch (error) {
-      toast.error(getApiError(error));
+    } catch {
+      setLoadFailed(true);
       setHabit(null);
     } finally {
       setIsLoading(false);
@@ -213,18 +232,20 @@ function HabitDetailContent() {
   }
 
   if (isLoading) {
-    return <div className="h-96 animate-pulse rounded-xl bg-muted" />;
+    return <PageSkeleton variant="detail" />;
+  }
+
+  if (loadFailed) {
+    return <LoadError onRetry={() => void loadData()} />;
   }
 
   if (!habit) {
     return (
-      <div className="flex min-h-72 flex-col items-center justify-center rounded-xl border border-dashed bg-background text-center">
-        <Flame className="size-8 text-muted-foreground" />
-        <p className="mt-3 font-medium">{t("habits.noHabits")}</p>
-        <Link className="mt-3 text-sm hover:underline" href="/habits">
-          {t("actions.backToHabits")}
-        </Link>
-      </div>
+      <EmptyState
+        icon={Flame}
+        title={t("habits.noHabits")}
+        action={<Button render={<Link href="/habits" />}>{t("actions.backToHabits")}</Button>}
+      />
     );
   }
 
@@ -234,41 +255,23 @@ function HabitDetailContent() {
 
   return (
     <div className="flex flex-col space-y-6">
-      <nav
-        className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
-        aria-label="Breadcrumb"
-      >
-        <Link className="hover:text-foreground" href="/habits">
-          {t("nav.habits")}
-        </Link>
-        <ChevronRight className="size-3.5" />
-        <span className="max-w-64 truncate text-foreground">{habit.title}</span>
-      </nav>
+      <DetailBreadcrumb
+        root={{ href: "/habits", label: t("nav.habits") }}
+        currentLabel={habit.title}
+      />
 
-      <Card className="border-orange-500/20 bg-orange-500/5">
+      <Card>
         <CardContent className="space-y-6">
           <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
             <div className="min-w-0 space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <CategoryBadge category={habit.category} />
-                <Badge variant="secondary">
-                  {t(
-                    habit.frequency === "DAILY"
-                      ? "frequency.daily"
-                      : habit.frequency === "WEEKDAYS"
-                        ? "frequency.weekdays"
-                        : "frequency.weekends",
-                  )}
-                </Badge>
+                <HabitFrequencyBadge frequency={habit.frequency} />
                 {habit.goal && (
-                  <Link href={`/goals/${encodeURIComponent(habit.goal.id)}`}>
-                    <Badge variant="outline" className="gap-1.5">
-                      <Target className="size-3" /> {habit.goal.title}
-                    </Badge>
-                  </Link>
+                  <GoalLinkBadge goal={habit.goal} />
                 )}
               </div>
-              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                 {habit.title}
               </h1>
               <p className="max-w-3xl whitespace-pre-wrap text-sm text-muted-foreground">
@@ -277,7 +280,7 @@ function HabitDetailContent() {
             </div>
             <Button
               size="lg"
-              variant={completedToday ? "outline" : "default"}
+              variant={completedToday ? "default" : "outline"}
               disabled={Boolean(updatingDate)}
               onClick={() => void toggleDate(today)}
             >
@@ -287,28 +290,31 @@ function HabitDetailContent() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-lg border bg-background p-4">
-              <p className="text-xs text-muted-foreground">
-                {t("habits.currentStreak")}
-              </p>
-              <p className="mt-1 text-2xl font-bold">
-                🔥 {habit.currentStreak}
-              </p>
-            </div>
-            <div className="rounded-lg border bg-background p-4">
-              <p className="text-xs text-muted-foreground">
-                {t("habits.bestStreak")}
-              </p>
-              <p className="mt-1 text-2xl font-bold">{analytics.bestStreak}</p>
-            </div>
-            <div className="rounded-lg border bg-background p-4">
-              <p className="text-xs text-muted-foreground">
-                {t("habits.totalCheckIns")}
-              </p>
-              <p className="mt-1 text-2xl font-bold">
-                {analytics.totalCheckIns}
-              </p>
-            </div>
+            <Item variant="outline">
+              <ItemContent>
+                <ItemDescription>{t("habits.currentStreak")}</ItemDescription>
+                <ItemTitle className="w-full text-2xl font-bold">
+                  <Flame className="size-5 text-muted-foreground" />
+                  {habit.currentStreak}
+                </ItemTitle>
+              </ItemContent>
+            </Item>
+            <Item variant="outline">
+              <ItemContent>
+                <ItemDescription>{t("habits.bestStreak")}</ItemDescription>
+                <ItemTitle className="w-full text-2xl font-bold">
+                  {analytics.bestStreak}
+                </ItemTitle>
+              </ItemContent>
+            </Item>
+            <Item variant="outline">
+              <ItemContent>
+                <ItemDescription>{t("habits.totalCheckIns")}</ItemDescription>
+                <ItemTitle className="w-full text-2xl font-bold">
+                  {analytics.totalCheckIns}
+                </ItemTitle>
+              </ItemContent>
+            </Item>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -324,13 +330,13 @@ function HabitDetailContent() {
 
       <Card>
         <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>{t("habits.activityLast30Days")}</CardTitle>
+          <CardTitle>{t("habits.activityLast30Days")}</CardTitle>
+          <CardAction>
             <span className="text-sm font-semibold">
               {t("habits.monthlyRate", { rate: analytics.monthlyRate })}
             </span>
-          </div>
-          <Progress value={analytics.monthlyRate} />
+          </CardAction>
+          <Progress value={analytics.monthlyRate} className="col-span-full" />
         </CardHeader>
         <CardContent>
           <HabitActivityGrid
@@ -353,7 +359,7 @@ function HabitDetailContent() {
               {history.map((log, index) => (
                 <div key={log.id ?? log.date} className="flex gap-3">
                   <div className="flex flex-col items-center">
-                    <span className="mt-1.5 size-2.5 rounded-full bg-emerald-500" />
+                    <span className="mt-1.5 size-2.5 rounded-full bg-primary" />
                     {index < history.length - 1 && (
                       <span className="min-h-10 w-px flex-1 bg-border" />
                     )}
@@ -376,10 +382,11 @@ function HabitDetailContent() {
               ))}
             </div>
           ) : (
-            <div className="flex min-h-32 flex-col items-center justify-center rounded-lg border border-dashed text-center text-sm text-muted-foreground">
-              <CalendarDays className="mb-2 size-5" />
-              {t("habits.noCheckIns")}
-            </div>
+            <EmptyState
+              icon={CalendarDays}
+              title={t("habits.noCheckIns")}
+              className="min-h-32 border-0"
+            />
           )}
         </CardContent>
       </Card>
@@ -396,7 +403,7 @@ function HabitDetailContent() {
       <ConfirmDeleteDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title={habit.title}
+        title={t("actions.deleteNamed", { name: habit.title })}
         description={t("actions.confirmDeleteHabit")}
         isDeleting={isDeleting}
         onConfirm={() => void deleteHabit()}
@@ -408,7 +415,7 @@ function HabitDetailContent() {
 export default function HabitDetailPage() {
   return (
     <Suspense
-      fallback={<div className="h-96 animate-pulse rounded-xl bg-muted" />}
+      fallback={<PageSkeleton variant="detail" />}
     >
       <HabitDetailContent />
     </Suspense>

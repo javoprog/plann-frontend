@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { enUS, ru, uz } from "date-fns/locale";
 import { CalendarDays, X } from "lucide-react";
 import { useLanguage } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ export function DatePicker({
   id,
   value,
   onChange,
-  placeholder = "Pick a date",
+  placeholder,
 }: DatePickerProps) {
   const { language, t } = useLanguage();
   const [open, setOpen] = useState(false);
@@ -50,7 +51,7 @@ export function DatePicker({
               day: "numeric",
               year: "numeric",
             }).format(value)
-          : placeholder}
+          : (placeholder ?? t("form.chooseDate"))}
       </PopoverTrigger>
       <PopoverContent
         side="bottom"
@@ -59,6 +60,7 @@ export function DatePicker({
         className="w-auto"
       >
         <Calendar
+          locale={{ en: enUS, ru, uz }[language]}
           mode="single"
           selected={value}
           defaultMonth={value}

@@ -12,19 +12,25 @@ import { useParams, useRouter } from "next/navigation";
 import {
   CalendarDays,
   CheckCircle2,
-  ChevronRight,
   Circle,
   Pencil,
-  Target,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useLanguage } from "@/components/providers/language-provider";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
+import { DetailBreadcrumb } from "@/components/shared/detail-breadcrumb";
+import { DetailMetaBadge } from "@/components/shared/detail-meta-badge";
+import { GoalLinkBadge } from "@/components/shared/goal-link-badge";
 import { PriorityBadge } from "@/components/tasks/priority-badge";
 import { SubtaskChecklist } from "@/components/tasks/subtask-checklist";
 import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
+import {
+  EmptyState,
+  LoadError,
+  PageSkeleton,
+} from "@/components/shared/async-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,14 +41,6 @@ import { formatDate } from "@/lib/format";
 import { withTaskCompletion } from "@/lib/task-completion";
 import type { Goal, Task } from "@/lib/types";
 
-function isInteractiveTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) return false;
-  return (
-    target.isContentEditable ||
-    ["INPUT", "TEXTAREA", "SELECT", "BUTTON", "A"].includes(target.tagName)
-  );
-}
-
 function TaskDetailContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -51,6 +49,7 @@ function TaskDetailContent() {
   const [task, setTask] = useState<Task | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -58,6 +57,7 @@ function TaskDetailContent() {
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
+    setLoadFailed(false);
     try {
       const [taskResponse, goalsResponse] = await Promise.all([
         api.get<Task>(`/tasks/${id}`),
@@ -65,8 +65,8 @@ function TaskDetailContent() {
       ]);
       setTask(taskResponse.data);
       setGoals(goalsResponse.data);
-    } catch (error) {
-      toast.error(getApiError(error));
+    } catch {
+      setLoadFailed(true);
       setTask(null);
     } finally {
       setIsLoading(false);
@@ -105,27 +105,6 @@ function TaskDetailContent() {
     [goals, isUpdating, refreshUser, task],
   );
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (
-        event.code !== "Space" ||
-        event.repeat ||
-        !task ||
-        isUpdating ||
-        formOpen ||
-        deleteOpen ||
-        isInteractiveTarget(event.target)
-      ) {
-        return;
-      }
-      event.preventDefault();
-      void toggleTask(!task.isCompleted);
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [deleteOpen, formOpen, isUpdating, task, toggleTask]);
-
   const subtaskStats = useMemo(() => {
     const subtasks = task?.subtasks ?? [];
     const completed = subtasks.filter((subtask) => subtask.isCompleted).length;
@@ -150,46 +129,39 @@ function TaskDetailContent() {
   }
 
   if (isLoading) {
-    return <div className="h-96 animate-pulse rounded-xl bg-muted" />;
+    return <PageSkeleton variant="detail" />;
+  }
+
+  if (loadFailed) {
+    return <LoadError onRetry={() => void loadData()} />;
   }
 
   if (!task) {
     return (
-      <div className="flex min-h-72 flex-col items-center justify-center rounded-xl border border-dashed bg-background text-center">
-        <Circle className="size-8 text-muted-foreground" />
-        <p className="mt-3 font-medium">{t("tasks.noTasks")}</p>
-        <Link className="mt-3 text-sm hover:underline" href="/tasks">
-          {t("actions.backToTasks")}
-        </Link>
-      </div>
+      <EmptyState
+        icon={Circle}
+        title={t("tasks.noTasks")}
+        action={<Button render={<Link href="/tasks" />}>{t("actions.backToTasks")}</Button>}
+      />
     );
   }
 
   return (
     <div className="flex flex-col space-y-6">
-      <nav
-        className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
-        aria-label="Breadcrumb"
-      >
-        <Link className="hover:text-foreground" href="/tasks">
-          {t("nav.tasks")}
-        </Link>
-        <ChevronRight className="size-3.5" />
-        {task.goal && (
-          <>
-            <Link
-              className="max-w-48 truncate hover:text-foreground"
-              href={`/goals/${encodeURIComponent(task.goal.id)}`}
-            >
-              {task.goal.title}
-            </Link>
-            <ChevronRight className="size-3.5" />
-          </>
-        )}
-        <span className="max-w-64 truncate text-foreground">{task.title}</span>
-      </nav>
+      <DetailBreadcrumb
+        root={{ href: "/tasks", label: t("nav.tasks") }}
+        parent={
+          task.goal
+            ? {
+                href: `/goals/${encodeURIComponent(task.goal.id)}`,
+                label: task.goal.title,
+              }
+            : undefined
+        }
+        currentLabel={task.title}
+      />
 
-      <Card className="border-primary/20 bg-primary/5">
+      <Card>
         <CardContent className="space-y-5">
           <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
             <div className="min-w-0 space-y-3">
@@ -197,29 +169,28 @@ function TaskDetailContent() {
                 <PriorityBadge priority={task.priority} />
                 <Badge
                   variant={task.isCompleted ? "default" : "secondary"}
-                  className="capitalize"
                 >
                   {task.isCompleted
                     ? t("common.completed")
                     : t("common.notCompleted")}
                 </Badge>
                 {task.goal && (
-                  <Link href={`/goals/${encodeURIComponent(task.goal.id)}`}>
-                    <Badge variant="outline" className="gap-1.5">
-                      <Target className="size-3" />
-                      {task.goal.title}
-                    </Badge>
-                  </Link>
+                  <GoalLinkBadge goal={task.goal} />
                 )}
               </div>
-              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                 {task.title}
               </h1>
             </div>
-            <div className="flex shrink-0 items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm">
-              <CalendarDays className="size-4 text-muted-foreground" />
-              {formatDate(task.dueDate, language, t("common.noDueDate"))}
-            </div>
+            <DetailMetaBadge icon={CalendarDays}>
+              <span>
+                {t("form.dueDate")}: {formatDate(
+                  task.dueDate,
+                  language,
+                  t("common.noDueDate"),
+                )}
+              </span>
+            </DetailMetaBadge>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -296,7 +267,7 @@ function TaskDetailContent() {
       <ConfirmDeleteDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title={task.title}
+        title={t("actions.deleteNamed", { name: task.title })}
         description={t("actions.confirmDeleteTask")}
         isDeleting={isDeleting}
         onConfirm={() => void deleteTask()}
@@ -308,7 +279,7 @@ function TaskDetailContent() {
 export default function TaskDetailPage() {
   return (
     <Suspense
-      fallback={<div className="h-96 animate-pulse rounded-xl bg-muted" />}
+      fallback={<PageSkeleton variant="detail" />}
     >
       <TaskDetailContent />
     </Suspense>

@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
-import { Loader2 } from "lucide-react";
+import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { DatePicker } from "@/components/shared/date-picker";
 import { useLanguage } from "@/components/providers/language-provider";
@@ -15,15 +14,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Spinner } from "@/components/ui/spinner";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { api, getApiError } from "@/lib/api";
+import { getCategoryLabel } from "@/lib/constants/categories";
 import { getLocalDateKey } from "@/lib/format";
 import type { Category, Goal, GoalStatus } from "@/lib/types";
 
@@ -55,19 +58,6 @@ export function GoalFormDialog({
       : undefined,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    setTitle(goal?.title ?? "");
-    setDescription(goal?.description ?? "");
-    setCategoryId(goal?.categoryId ?? "none");
-    setStatus(goal?.status ?? "IN_PROGRESS");
-    setDeadline(
-      goal?.deadline
-        ? new Date(`${goal.deadline.slice(0, 10)}T00:00:00`)
-        : undefined,
-    );
-  }, [goal, open]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -101,16 +91,18 @@ export function GoalFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
             {goal ? t("form.editGoalTitle") : t("form.createGoalTitle")}
           </DialogTitle>
           <DialogDescription>{t("form.goalDescriptionText")}</DialogDescription>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="goal-title">{t("form.title")}</Label>
+        <form className="min-h-0" onSubmit={handleSubmit}>
+          <ScrollArea className="-mx-1 max-h-[60svh] px-1">
+          <FieldGroup className="py-1 pr-3">
+          <Field>
+            <FieldLabel htmlFor="goal-title">{t("form.title")}</FieldLabel>
             <Input
               id="goal-title"
               name="title"
@@ -121,9 +113,9 @@ export function GoalFormDialog({
               maxLength={160}
               required
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="goal-description">{t("form.description")}</Label>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="goal-description">{t("form.description")}</FieldLabel>
             <Textarea
               id="goal-description"
               name="description"
@@ -132,50 +124,35 @@ export function GoalFormDialog({
               placeholder={t("form.goalDescriptionPlaceholder")}
               rows={4}
             />
-          </div>
+          </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>{t("form.category")}</Label>
+            <Field>
+              <FieldLabel htmlFor="goal-category">{t("form.category")}</FieldLabel>
               <Select
                 value={categoryId}
                 onValueChange={(value) => setCategoryId(String(value))}
               >
-                <SelectTrigger className="w-full">
-                  <span className="truncate">
-                    {categoryId === "none"
-                      ? t("common.noCategory")
-                      : categories.find((category) => category.id === categoryId)
-                          ?.name ?? t("form.chooseCategory")}
-                  </span>
+                <SelectTrigger id="goal-category" className="w-full">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                <SelectItem value="none">{t("common.noCategory")}</SelectItem>
+                  <SelectItem value="none">{t("common.noCategory")}</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
-                      {category.name}
+                      {getCategoryLabel(category.name, t)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>{t("form.status")}</Label>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="goal-status">{t("form.status")}</FieldLabel>
               <Select
                 value={status}
                 onValueChange={(value) => setStatus(value as GoalStatus)}
               >
-                <SelectTrigger className="w-full">
-                  <span className="truncate">
-                    {t(
-                      status === "PLANNED"
-                        ? "status.planned"
-                        : status === "IN_PROGRESS"
-                          ? "status.inProgress"
-                          : status === "COMPLETED"
-                            ? "status.completed"
-                            : "status.cancelled",
-                    )}
-                  </span>
+                <SelectTrigger id="goal-status" className="w-full">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PLANNED">{t("status.planned")}</SelectItem>
@@ -184,18 +161,20 @@ export function GoalFormDialog({
                   <SelectItem value="CANCELLED">{t("status.cancelled")}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="goal-deadline">{t("form.deadline")}</Label>
+          <Field>
+            <FieldLabel htmlFor="goal-deadline">{t("form.deadline")}</FieldLabel>
             <DatePicker
               id="goal-deadline"
               value={deadline}
               onChange={setDeadline}
               placeholder={t("form.chooseDate")}
             />
-          </div>
-          <DialogFooter>
+          </Field>
+          </FieldGroup>
+          </ScrollArea>
+          <DialogFooter className="mt-4">
             <Button
               type="button"
               variant="outline"
@@ -204,7 +183,7 @@ export function GoalFormDialog({
               {t("actions.cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+              {isSubmitting && <Spinner aria-label={t("common.loading")} />}
               {goal ? t("actions.saveChanges") : t("actions.createGoal")}
             </Button>
           </DialogFooter>

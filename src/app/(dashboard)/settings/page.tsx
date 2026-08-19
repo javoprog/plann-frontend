@@ -2,10 +2,10 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import {
+  CircleCheck,
   ExternalLink,
   Languages,
   Link2Off,
-  Loader2,
   Palette,
   Send,
   ShieldCheck,
@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useLanguage } from "@/components/providers/language-provider";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,13 +24,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { api, getApiError } from "@/lib/api";
 import type { Language, ThemePreference, User } from "@/lib/types";
@@ -49,20 +59,18 @@ export default function SettingsPage() {
   } | null>(null);
 
   useEffect(() => {
-    if (!telegramLink) return;
+    if (!telegramLink || user?.telegramChatId) return;
 
     const refreshTelegramStatus = () => {
       void refreshUser().catch(() => undefined);
     };
     window.addEventListener("focus", refreshTelegramStatus);
     return () => window.removeEventListener("focus", refreshTelegramStatus);
-  }, [refreshUser, telegramLink]);
-
-  useEffect(() => {
-    if (user?.telegramChatId) setTelegramLink(null);
-  }, [user?.telegramChatId]);
+  }, [refreshUser, telegramLink, user?.telegramChatId]);
 
   if (!user) return null;
+
+  const activeTelegramLink = user.telegramChatId ? null : telegramLink;
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -187,22 +195,15 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {t("settings.title")}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t("settings.description")}
-          </p>
-        </div>
-        <div />
-      </div>
+      <PageHeader
+        title={t("settings.title")}
+        description={t("settings.description")}
+      />
 
       <div className="grid max-w-4xl gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
               <UserRound className="size-5" />
             </div>
             <CardTitle>{t("settings.profile")}</CardTitle>
@@ -213,11 +214,13 @@ export default function SettingsPage() {
           <CardContent>
             <form
               key={`${user.name}-${user.email}`}
-              className="space-y-4"
               onSubmit={saveProfile}
             >
-              <div className="space-y-2">
-                <Label htmlFor="settings-name">{t("settings.name")}</Label>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="settings-name">
+                    {t("settings.name")}
+                  </FieldLabel>
                 <Input
                   id="settings-name"
                   name="name"
@@ -227,9 +230,11 @@ export default function SettingsPage() {
                   maxLength={80}
                   required
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="settings-email">{t("settings.email")}</Label>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="settings-email">
+                    {t("settings.email")}
+                  </FieldLabel>
                 <Input
                   id="settings-email"
                   name="email"
@@ -238,18 +243,21 @@ export default function SettingsPage() {
                   autoComplete="email"
                   required
                 />
-              </div>
-              <Button type="submit" disabled={isSavingProfile}>
-                {isSavingProfile && <Loader2 className="size-4 animate-spin" />}
-                {t("settings.saveProfile")}
-              </Button>
+                </Field>
+                <Button type="submit" disabled={isSavingProfile}>
+                  {isSavingProfile && (
+                    <Spinner aria-label={t("common.loading")} />
+                  )}
+                  {t("settings.saveProfile")}
+                </Button>
+              </FieldGroup>
             </form>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
               <Palette className="size-5" />
             </div>
             <CardTitle>{t("settings.appearance")}</CardTitle>
@@ -257,33 +265,37 @@ export default function SettingsPage() {
               {t("settings.appearanceDescription")}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <Label>{t("settings.theme")}</Label>
-            <Select
-              value={user.theme}
-              disabled={isSavingTheme}
-              onValueChange={(value) =>
-                void updateTheme(value as ThemePreference)
-              }
-            >
-              <SelectTrigger className="w-full">
-                <span>{t(`settings.${user.theme}`)}</span>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="system">{t("settings.system")}</SelectItem>
-                <SelectItem value="light">{t("settings.light")}</SelectItem>
-                <SelectItem value="dark">{t("settings.dark")}</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              {t("settings.systemThemeHint")}
-            </p>
+          <CardContent>
+            <Field>
+              <FieldLabel htmlFor="settings-theme">
+                {t("settings.theme")}
+              </FieldLabel>
+              <Select
+                value={user.theme}
+                disabled={isSavingTheme}
+                onValueChange={(value) =>
+                  void updateTheme(value as ThemePreference)
+                }
+              >
+                <SelectTrigger id="settings-theme" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="system">{t("settings.system")}</SelectItem>
+                  <SelectItem value="light">{t("settings.light")}</SelectItem>
+                  <SelectItem value="dark">{t("settings.dark")}</SelectItem>
+                </SelectContent>
+              </Select>
+              <FieldDescription>
+                {t("settings.systemThemeHint")}
+              </FieldDescription>
+            </Field>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
               <Languages className="size-5" />
             </div>
             <CardTitle>{t("settings.language")}</CardTitle>
@@ -291,35 +303,41 @@ export default function SettingsPage() {
               {t("settings.languageDescription")}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <Label>{t("settings.language")}</Label>
-            <Select
-              value={language}
-              disabled={isSavingLanguage}
-              onValueChange={(value) => void updateLanguage(value as Language)}
-            >
-              <SelectTrigger className="w-full">
-                <span>{language.toUpperCase()}</span>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="en">English (EN)</SelectItem>
-                <SelectItem value="ru">Русский (RU)</SelectItem>
-                <SelectItem value="uz">O‘zbekcha (UZ)</SelectItem>
-              </SelectContent>
-            </Select>
+          <CardContent>
+            <Field>
+              <FieldLabel htmlFor="settings-language">
+                {t("settings.language")}
+              </FieldLabel>
+              <Select
+                value={language}
+                disabled={isSavingLanguage}
+                onValueChange={(value) =>
+                  void updateLanguage(value as Language)
+                }
+              >
+                <SelectTrigger id="settings-language" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English (EN)</SelectItem>
+                  <SelectItem value="ru">Русский (RU)</SelectItem>
+                  <SelectItem value="uz">O‘zbekcha (UZ)</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
           </CardContent>
         </Card>
 
         <Card className="xl:col-span-2">
           <CardHeader>
-            <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400">
+            <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
               <Send className="size-5" />
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <CardTitle>{t("settings.telegramTitle")}</CardTitle>
               {user.telegramChatId && (
                 <Badge variant="secondary">
-                  🟢 {t("settings.telegramConnected")}
+                  <CircleCheck /> {t("settings.telegramConnected")}
                 </Badge>
               )}
             </div>
@@ -330,42 +348,33 @@ export default function SettingsPage() {
           <CardContent>
             {user.telegramChatId ? (
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center justify-between gap-4 rounded-lg border p-3 sm:min-w-80">
-                  <div>
-                    <p className="text-sm font-medium">
+                <Field
+                  orientation="horizontal"
+                  className="rounded-lg border p-3 sm:min-w-80"
+                >
+                  <FieldContent>
+                    <FieldLabel htmlFor="telegram-notifications">
                       {t("settings.telegramNotifications")}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
+                    </FieldLabel>
+                    <FieldDescription>
                       {t("settings.telegramNotificationsDescription")}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={user.telegramNotifications}
-                    aria-label={t("settings.telegramNotifications")}
+                    </FieldDescription>
+                  </FieldContent>
+                  <Switch
+                    id="telegram-notifications"
+                    checked={user.telegramNotifications}
                     disabled={isUpdatingTelegram}
-                    className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                      user.telegramNotifications ? "bg-primary" : "bg-muted"
-                    }`}
-                    onClick={() => void toggleTelegramNotifications()}
-                  >
-                    <span
-                      className={`pointer-events-none block size-5 translate-y-0.5 rounded-full bg-background shadow-sm transition-transform ${
-                        user.telegramNotifications
-                          ? "translate-x-5"
-                          : "translate-x-0.5"
-                      }`}
-                    />
-                  </button>
-                </div>
+                    aria-label={t("settings.telegramNotifications")}
+                    onCheckedChange={() => void toggleTelegramNotifications()}
+                  />
+                </Field>
                 <Button
                   variant="outline"
                   disabled={isUpdatingTelegram}
                   onClick={() => void unlinkTelegram()}
                 >
                   {isUpdatingTelegram ? (
-                    <Loader2 className="size-4 animate-spin" />
+                    <Spinner aria-label={t("common.loading")} />
                   ) : (
                     <Link2Off className="size-4" />
                   )}
@@ -374,13 +383,13 @@ export default function SettingsPage() {
               </div>
             ) : (
               <div className="flex flex-col items-start gap-3">
-                {!telegramLink ? (
+                {!activeTelegramLink ? (
                   <Button
                     disabled={isConnectingTelegram}
                     onClick={() => void createTelegramLink()}
                   >
                     {isConnectingTelegram ? (
-                      <Loader2 className="size-4 animate-spin" />
+                      <Spinner aria-label={t("common.loading")} />
                     ) : (
                       <Send className="size-4" />
                     )}
@@ -390,13 +399,13 @@ export default function SettingsPage() {
                   <>
                     <p className="text-sm text-muted-foreground">
                       {t("settings.telegramLinkExpires", {
-                        code: telegramLink.code,
+                        code: activeTelegramLink.code,
                       })}
                     </p>
                     <Button
                       onClick={() =>
                         window.open(
-                          telegramLink.botUrl,
+                          activeTelegramLink.botUrl,
                           "_blank",
                           "noopener,noreferrer",
                         )
@@ -414,7 +423,7 @@ export default function SettingsPage() {
 
         <Card className="xl:col-span-2">
           <CardHeader>
-            <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
               <ShieldCheck className="size-5" />
             </div>
             <CardTitle>{t("settings.security")}</CardTitle>
@@ -424,59 +433,60 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <form
-              className="grid gap-4 sm:grid-cols-2"
               onSubmit={updatePassword}
             >
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="current-password">
-                  {t("settings.currentPassword")}
-                </Label>
-                <Input
-                  id="current-password"
-                  name="currentPassword"
-                  type="password"
-                  autoComplete="current-password"
-                  minLength={8}
-                  maxLength={72}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="new-password">
-                  {t("settings.newPassword")}
-                </Label>
-                <Input
-                  id="new-password"
-                  name="newPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={8}
-                  maxLength={72}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">
-                  {t("settings.confirmPassword")}
-                </Label>
-                <Input
-                  id="confirm-password"
-                  name="confirmPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={8}
-                  maxLength={72}
-                  required
-                />
-              </div>
-              <div className="sm:col-span-2">
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="current-password">
+                    {t("settings.currentPassword")}
+                  </FieldLabel>
+                  <Input
+                    id="current-password"
+                    name="currentPassword"
+                    type="password"
+                    autoComplete="current-password"
+                    minLength={8}
+                    maxLength={72}
+                    required
+                  />
+                </Field>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="new-password">
+                      {t("settings.newPassword")}
+                    </FieldLabel>
+                    <Input
+                      id="new-password"
+                      name="newPassword"
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={8}
+                      maxLength={72}
+                      required
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="confirm-password">
+                      {t("settings.confirmPassword")}
+                    </FieldLabel>
+                    <Input
+                      id="confirm-password"
+                      name="confirmPassword"
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={8}
+                      maxLength={72}
+                      required
+                    />
+                  </Field>
+                </div>
                 <Button type="submit" disabled={isSavingPassword}>
                   {isSavingPassword && (
-                    <Loader2 className="size-4 animate-spin" />
+                    <Spinner aria-label={t("common.loading")} />
                   )}
                   {t("settings.updatePassword")}
                 </Button>
-              </div>
+              </FieldGroup>
             </form>
           </CardContent>
         </Card>
