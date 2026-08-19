@@ -27,7 +27,7 @@ jobs:
           context: .
           file: ./Dockerfile
           build-args: |
-            NEXT_PUBLIC_API_URL=http://cu3sgsnbhrnh2o648jfah2nb6.170.168.6.82.sslip.io
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL || 'http://kbb5viedf7jfg11ogmj1hh4d.170.168.6.82.sslip.io' }}
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/plann-frontend:latest
           cache-from: type=gha
