@@ -413,13 +413,14 @@ export default function SettingsPage() {
                       })}
                     </p>
                     <Button
-                      onClick={() =>
-                        window.open(
-                          activeTelegramLink.botUrl,
-                          "_blank",
-                          "noopener,noreferrer",
-                        )
+                      render={
+                        <a
+                          href={activeTelegramLink.botUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        />
                       }
+                      variant="outline"
                     >
                       <ExternalLink className="size-4" />
                       {t("settings.telegramOpenBot")}
